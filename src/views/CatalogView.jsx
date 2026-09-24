@@ -109,9 +109,9 @@ export default function CatalogView({ onSimulate }) {
     { key: 'de', label: 'Compra en Alemania', align: 'right', render: (v) => <span className="text-xs tabular-nums">{v.dePrice ? `${eur0(v.dePrice[0])} – ${eur0(v.dePrice[1])}` : '—'}</span> },
     { key: 'es', label: 'Venta en Galicia', align: 'right', render: (v) => <span className="text-xs tabular-nums">{v.esPrice ? `${eur0(v.esPrice[0])} – ${eur0(v.esPrice[1])}` : '—'}</span> },
     {
-      key: 'gap', label: 'Diferencial', align: 'right', render: (v) => {
+      key: 'gap', label: 'Margen est. (ES−DE)', align: 'right', render: (v) => {
         const gap = (v.esPrice?.[1] ?? 0) - (v.dePrice?.[0] ?? 0);
-        return <span className={cx('tabular-nums text-xs font-semibold', gap > 4000 ? 'text-emerald-400' : gap > 2000 ? 'text-amber-300' : 'text-slate-400')}>{gap > 0 ? eur0(gap) : '—'}</span>;
+        return <span title="Diferencia de precio entre venta en Galicia y compra en Alemania" className={cx('tabular-nums text-xs font-semibold', gap > 4000 ? 'text-emerald-400' : gap > 2000 ? 'text-amber-300' : 'text-slate-400')}>{gap > 0 ? eur0(gap) : '—'}</span>;
       },
     },
     { key: 'rot', label: 'Rotación', align: 'right', render: (v) => <span className="text-xs text-slate-400">{v.rotationDays ? `${v.rotationDays} d` : '—'}</span> },
@@ -143,7 +143,7 @@ export default function CatalogView({ onSimulate }) {
         <Stat label="Motores roca" value={stats.gold} tone="emerald" icon={ShieldCheck} />
         <Stat label="Motores prohibidos" value={stats.banned} tone="rose" icon={AlertTriangle} />
         <Stat label="Compra media (Alemania)" value={eur0(stats.avgDe)} tone="sky" />
-        <Stat label="Diferencial medio ES−DE" value={eur0(stats.avgGap)} tone="amber" icon={TrendingUp} hint="Bruto antes de costes e impuestos" />
+        <Stat label="Margen medio ES−DE" value={eur0(stats.avgGap)} tone="amber" icon={TrendingUp} hint="Diferencial de precio bruto antes de costes e impuestos" />
       </div>
 
       <Card className="p-3">
@@ -160,7 +160,7 @@ export default function CatalogView({ onSimulate }) {
               { value: 'relevancia', label: 'Orden: fiabilidad' },
               { value: 'precio_asc', label: 'Orden: precio ↑' },
               { value: 'precio_desc', label: 'Orden: precio ↓' },
-              { value: 'margen', label: 'Orden: mayor diferencial' },
+              { value: 'margen', label: 'Orden: mayor margen bruto (ES−DE)' },
               { value: 'rotacion', label: 'Orden: venta más rápida' },
             ]}
           />
@@ -237,9 +237,9 @@ export default function CatalogView({ onSimulate }) {
                 <p className="text-[11px] text-slate-500 mt-1">Rotación prevista: {detail.rotationDays ? `${detail.rotationDays} días` : '—'}</p>
               </Card>
               <Card className="p-3">
-                <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Diferencial bruto</p>
+                <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Margen bruto estimado</p>
                 <p className="text-xl font-extrabold text-emerald-400 mt-1">{eur0((detail.esPrice?.[1] ?? 0) - (detail.dePrice?.[0] ?? 0))}</p>
-                <p className="text-[11px] text-slate-500 mt-1">Antes de transporte, impuestos y puesta a punto</p>
+                <p className="text-[11px] text-slate-500 mt-1">Diferencial de precio ES−DE antes de gastos e impuestos</p>
               </Card>
               <Card className="p-3">
                 <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Veredicto</p>
