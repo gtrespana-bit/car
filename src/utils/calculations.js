@@ -29,6 +29,56 @@ export function getIedmtRate(co2) {
   return 0.1475; // 14.75%
 }
 
+// ---------------------------------------------------------------------------
+// Potencia fiscal oficial (Anexo V RD 2822/1998) para motores de 4 tiempos:
+//   CVF = 0,08 × (cilindrada unitaria en cm³)^0,6 × nº cilindros
+// ---------------------------------------------------------------------------
+export function computeCvf(cc, cylinders = 4) {
+  const c = Number(cc) || 0;
+  const n = Number(cylinders) || 4;
+  if (c <= 0) return 0;
+  return 0.08 * Math.pow(c / n, 0.6) * n;
+}
+
+// Antigüedad en años (entero) desde el año de primera matriculación hasta hoy
+export function getVehicleAgeYears(year, refDate = new Date()) {
+  const y = Number(year) || refDate.getFullYear();
+  return Math.max(0, refDate.getFullYear() - y);
+}
+
+// ---------------------------------------------------------------------------
+// VALOR VENAL HACIENDA (Orden HFP de precios medios)
+//   valorVenal = precioMedioNuevo × % depreciación por antigüedad
+//   Para el IEDMT la Orden permite minorar el valor en la parte de IVA (21 %)
+//   e IEDMT que ya incluye el precio medio de la tabla.
+// ---------------------------------------------------------------------------
+export function getHaciendaValuation({ newPrice, year, co2, refDate = new Date() }) {
+  const price = Number(newPrice) || 0;
+  const age = getVehicleAgeYears(year, refDate);
+  // La tabla cuenta "hasta 1 año" = 100 %: un coche del año en curso o del
+  // anterior con menos de 12 meses tributa al 100 %.
+  const depreciation = getBoeDepreciation(Math.max(1, age));
+  const valorVenal = price * depreciation;
+  const rate = getIedmtRate(co2);
+  const iedmtBase = valorVenal / (1 + 0.21 + rate);
+  return { age, depreciation, valorVenal, iedmtBase, rate };
+}
+
+/**
+ * Base imponible del IEDMT (Modelo 576) según método de valoración:
+ *  - 'tablas'  : valor venal de Hacienda minorado de IVA + IEDMT (no comprobable)
+ *  - 'factura' : precio real pagado (valor de mercado declarado). Si es menor
+ *                que el de tablas, la AEAT puede comprobar valores.
+ */
+export function getIedmtBase({ method, purchasePrice, newPrice, year, co2 }) {
+  const purchase = Number(purchasePrice) || 0;
+  const hac = getHaciendaValuation({ newPrice, year, co2 });
+  if (method === 'tablas' && hac.valorVenal > 0) {
+    return { base: hac.iedmtBase, source: 'tablas', hacienda: hac };
+  }
+  return { base: purchase, source: 'factura', hacienda: hac };
+}
+
 // Impuesto de Tracción Mecánica (IVTM) Concello de A Coruña aproximado anual
 export function getCorunaIvtm(cvf) {
   const power = Number(cvf) || 12;
@@ -66,8 +116,15 @@ export function calculateIrpfOnGain(gain) {
 
   if (remaining <= 0) return tax;
 
-  // Tramo 4: Más de 200.000 € al 27%
-  tax += remaining * 0.27;
+  // Tramo 4: De 200.000 a 300.000 € al 27%
+  const t4 = Math.min(remaining, 100000);
+  tax += t4 * 0.27;
+  remaining -= t4;
+
+  if (remaining <= 0) return tax;
+
+  // Tramo 5: Más de 300.000 € al 30%
+  tax += remaining * 0.30;
 
   return tax;
 }
