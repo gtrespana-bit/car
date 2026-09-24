@@ -56,12 +56,15 @@ export const HACIENDA_VALUATION_NOTES = [
 //    en el año de matriculación (ej: matricular en junio = 3/4 de la cuota).
 // ---------------------------------------------------------------------------
 export const IVTM_CORUNA_TURISMOS = [
-  { label: "Menos de 8 CVF", minCvf: 0, maxCvf: 7.99, annual: 25.24 },
-  { label: "De 8 hasta 11,99 CVF", minCvf: 8, maxCvf: 11.99, annual: 68.16 },
-  { label: "De 12 hasta 15,99 CVF", minCvf: 12, maxCvf: 15.99, annual: 143.88 },
-  { label: "De 16 hasta 19,99 CVF", minCvf: 16, maxCvf: 19.99, annual: 179.22 },
+  { label: "Menos de 8 CVF", minCvf: 0, maxCvf: 7.99, annual: 19.50 },
+  { label: "De 8 hasta 11,99 CVF", minCvf: 8, maxCvf: 11.99, annual: 62.62 },
+  { label: "De 12 hasta 15,99 CVF", minCvf: 12, maxCvf: 15.99, annual: 132.19 },
+  { label: "De 16 hasta 19,99 CVF", minCvf: 16, maxCvf: 19.99, annual: 179.20 },
   { label: "20 CVF o más", minCvf: 20, maxCvf: 999, annual: 224.00 },
 ];
+// Fuente: Ordenanza Fiscal nº 52 del Concello da Coruña (Pleno 18-11-2024,
+// BOP nº 9 de 15-01-2025), libro de ordenanzas 2026. Periodo voluntario 2026:
+// del 3 de marzo al 5 de mayo (cargo a domiciliados el 10 de abril).
 
 export const IVTM_CORUNA_BONIFICACIONES = [
   { label: "Vehículos eléctricos / 0 Emisiones", pct: 75, years: "5 años" },
@@ -75,9 +78,9 @@ export const IVTM_CORUNA_BONIFICACIONES = [
 export const REGISTRATION_FEES = [
   { group: "DGT", code: "Tasa 1.1", label: "Matriculación ordinaria (permiso de circulación)", amount: 99.77, mandatory: true, note: "Fija estatal. Se paga online en sede.dgt.gob.es o en Jefatura (C/ Médico Rodríguez)." },
   { group: "DGT", code: "Tasa 1.5", label: "Cambio de titularidad (transferencia al comprador final)", amount: 55.70, mandatory: false, note: "La paga el comprador final al transferir. Si el vehículo tiene +25 años: 27,85 €." },
-  { group: "DGT", code: "Tasa 4.1", label: "Duplicado permiso / anotaciones", amount: 20.81, mandatory: false, note: "Solo si hay que corregir datos." },
-  { group: "DGT", code: "Placas verdes", label: "Matrícula temporal de circulación (P) 60 días", amount: 20.81, mandatory: false, note: "Alternativa a las placas rojas alemanas para circular hasta matricular." },
-  { group: "ITV", code: "ITV Import.", label: "Inspección previa a matriculación (turismo, Galicia)", amount: 140.00, mandatory: true, note: "Orientativo. Espíritu Santo (Cambre) / Sabón (Arteixo). Diésel ~10 € más por opacímetro." },
+  { group: "DGT", code: "Tasa 4.1", label: "Duplicado permiso / anotaciones", amount: 21.30, mandatory: false, note: "Solo si hay que corregir datos." },
+  { group: "DGT", code: "Placas verdes", label: "Matrícula temporal de circulación (P) 60 días", amount: 20.61, mandatory: false, note: "Tasa 1.4 DGT. Alternativa a las placas rojas alemanas para circular hasta matricular." },
+  { group: "ITV", code: "ITV Import.", label: "Inspección previa a matriculación (turismo diésel + ficha técnica, Galicia)", amount: 132.59, mandatory: true, note: "Tarifa regulada Xunta 2026: turismo diésel 52,30 € + expedición de ficha técnica 80,29 € (IVA y tasa DGT incluidos). Gasolina: 43,76 € + 80,29 €. Estaciones Espíritu Santo (Cambre) y Sabón (Arteixo)." },
   { group: "ITV", code: "Ficha Reducida", label: "Ficha técnica reducida (si NO trae COC)", amount: 90.00, mandatory: false, note: "De 60 a 200 € según ingeniería. Gratis si el coche trae el Certificado de Conformidad (COC)." },
   { group: "ITV", code: "COC fabricante", label: "Certificado de Conformidad pedido al fabricante", amount: 120.00, mandatory: false, note: "VW/Audi/Seat ~120-150 €. BMW ~150 €. Mercedes ~110 €. Toyota ~100 €." },
   { group: "AEAT", code: "Mod. 576", label: "Impuesto de Matriculación (IEDMT)", amount: null, mandatory: true, note: "Según tramo CO2 y valor venal. Ver tabla IEDMT. 0 € si CO2 ≤ 120 g/km (Mod. 06 exento)." },

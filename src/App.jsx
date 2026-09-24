@@ -1,153 +1,193 @@
-import React, { useState, useEffect } from 'react';
-import Navbar from './components/Navbar';
-import DashboardView from './components/DashboardView';
-import CalculatorView from './components/CalculatorView';
-import PipelineView from './components/PipelineView';
-import ReliabilityGuideView from './components/ReliabilityGuideView';
-import GuideView from './components/GuideView';
-import ContractsView from './components/ContractsView';
-import Phase2RoadmapView from './components/Phase2RoadmapView';
-import { INITIAL_VEHICLES } from './data/initialData';
-import { Car, MapPin, ShieldCheck } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import {
+  Gauge, Car, Database, Calculator, Users, Wallet, FileWarning, FileCheck2, BarChart3,
+  BookOpen, Settings as SettingsIcon, Menu, X, Building2, HardDrive, MapPin, ShieldCheck,
+  ReceiptText,
+} from 'lucide-react';
+import { StoreProvider, useStore } from './lib/store.jsx';
+import { Toasts, Badge, cx } from './components/ui.jsx';
+import { eur0 } from './lib/format.js';
+import { fleetSummary, isSold } from './domain/finance.js';
 
-const STORAGE_KEY = 'coruna_autoimport_vehicles_v1';
+import DashboardView from './views/DashboardView.jsx';
+import FleetView from './views/FleetView.jsx';
+import CatalogView from './views/CatalogView.jsx';
+import ImportSimulatorView from './views/ImportSimulatorView.jsx';
+import CrmView from './views/CrmView.jsx';
+import AccountingView from './views/AccountingView.jsx';
+import TaxView from './views/TaxView.jsx';
+import DocumentsView from './views/DocumentsView.jsx';
+import ReportsView from './views/ReportsView.jsx';
+import InvoicesView from './views/InvoicesView.jsx';
+import GuidesView from './views/GuidesView.jsx';
+import SettingsView from './views/SettingsView.jsx';
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedCar, setSelectedCar] = useState(null);
+const NAV = [
+  { group: 'Operativa', items: [
+    { id: 'dashboard', label: 'Cuadro de mando', icon: Gauge },
+    { id: 'fleet', label: 'Flota y stock', icon: Car },
+    { id: 'catalog', label: 'Catálogo', icon: Database },
+    { id: 'simulator', label: 'Simulador', icon: Calculator },
+    { id: 'crm', label: 'Clientes y ventas', icon: Users },
+  ] },
+  { group: 'Gestión', items: [
+    { id: 'accounting', label: 'Contabilidad', icon: Wallet },
+    { id: 'invoices', label: 'Facturación', icon: ReceiptText },
+    { id: 'taxes', label: 'Impuestos', icon: FileWarning },
+    { id: 'documents', label: 'Documentación', icon: FileCheck2 },
+    { id: 'reports', label: 'Informes', icon: BarChart3 },
+  ] },
+  { group: 'Referencia', items: [
+    { id: 'guides', label: 'Guías y contratos', icon: BookOpen },
+    { id: 'settings', label: 'Ajustes', icon: SettingsIcon },
+  ] },
+];
 
-  // Load vehicles from localStorage or use initial 3 pilot vehicles
-  const [vehicles, setVehicles] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.error("Error reading localStorage:", e);
-    }
-    return INITIAL_VEHICLES;
-  });
+const LEGAL_FORM = {
+  particular: 'Particular',
+  autonomo: 'Autónomo',
+  sl: 'Sociedad Limitada',
+};
 
-  // Sync to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(vehicles));
-    } catch (e) {
-      console.error("Error saving to localStorage:", e);
-    }
-  }, [vehicles]);
+function Shell() {
+  const { state, ready, tariffs, toasts } = useStore();
+  const [view, setView] = useState('dashboard');
+  const [menu, setMenu] = useState(false);
+  const [simSeed, setSimSeed] = useState(null);
+  const [openVehicleId, setOpenVehicleId] = useState(null);
 
-  // Handlers
-  const handleAddVehicle = (newCar) => {
-    setVehicles(prev => [newCar, ...prev]);
+  useEffect(() => { setMenu(false); }, [view]);
+
+  const summary = useMemo(
+    () => fleetSummary(state.vehicles, { regime: state.company.vatRegime === 'general' ? 'general' : 'rebu', tariffs }),
+    [state.vehicles, state.company.vatRegime, tariffs],
+  );
+  const openContacts = state.contacts.filter((c) => c.stage !== 'cerrado' && c.stage !== 'descartado').length;
+
+  const pendingInvoices = state.vehicles.filter(isSold).filter((v) => !(state.invoices || []).some((i) => i.vehicleId === v.id)).length;
+
+  const counters = {
+    fleet: summary.stockCount || null,
+    crm: openContacts || null,
+    invoices: pendingInvoices || null,
   };
 
-  const handleUpdateVehicle = (updatedCar) => {
-    setVehicles(prev => prev.map(c => c.id === updatedCar.id ? updatedCar : c));
-  };
+  const go = (v) => setView(v);
+  const openSimulator = (seed) => { setSimSeed(seed ? { ...seed, at: Date.now() } : null); setView('simulator'); };
+  const editVehicle = (id) => { setOpenVehicleId(id); setView('fleet'); };
 
-  const handleDeleteVehicle = (carId) => {
-    if (window.confirm("¿Seguro que deseas eliminar este vehículo de la lista?")) {
-      setVehicles(prev => prev.filter(c => c.id !== carId));
-      if (selectedCar && selectedCar.id === carId) {
-        setSelectedCar(null);
-      }
-    }
-  };
-
-  const handleResetData = () => {
-    if (window.confirm("¿Restablecer los datos originales de los 3 vehículos piloto de ejemplo?")) {
-      setVehicles(INITIAL_VEHICLES);
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem('importauto_completed_steps');
-      setSelectedCar(null);
-    }
-  };
+  const vehicle = view;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
-      
-      {/* Top Navbar */}
-      <Navbar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        vehicles={vehicles}
-        onResetData={handleResetData}
-      />
-
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        {activeTab === 'dashboard' && (
-          <DashboardView 
-            vehicles={vehicles} 
-            setActiveTab={setActiveTab}
-            onSelectCar={(car) => setSelectedCar(car)}
-          />
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950">
+      {/* Sidebar */}
+      <aside
+        className={cx(
+          'fixed inset-y-0 left-0 z-50 w-64 border-r border-slate-800 bg-slate-900/95 backdrop-blur-md flex flex-col transition-transform lg:translate-x-0 print:hidden',
+          menu ? 'translate-x-0' : '-translate-x-full',
         )}
-
-        {activeTab === 'calculator' && (
-          <CalculatorView 
-            onAddVehicleToPipeline={handleAddVehicle} 
-            setActiveTab={setActiveTab}
-          />
-        )}
-
-        {activeTab === 'pipeline' && (
-          <PipelineView 
-            vehicles={vehicles}
-            onUpdateVehicle={handleUpdateVehicle}
-            onDeleteVehicle={handleDeleteVehicle}
-            onAddVehicle={handleAddVehicle}
-            selectedCar={selectedCar}
-            setSelectedCar={setSelectedCar}
-            setActiveTab={setActiveTab}
-          />
-        )}
-
-        {activeTab === 'reliability' && (
-          <ReliabilityGuideView />
-        )}
-
-        {activeTab === 'guide' && (
-          <GuideView />
-        )}
-
-        {activeTab === 'contracts' && (
-          <ContractsView vehicles={vehicles} />
-        )}
-
-        {activeTab === 'phase2' && (
-          <Phase2RoadmapView />
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-900/60 py-8 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 rounded-md bg-amber-500 flex items-center justify-center text-slate-950 font-black">
-              <Car className="w-3.5 h-3.5" />
+      >
+        <div className="px-4 py-4 border-b border-slate-800 flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center text-slate-950 shrink-0">
+              <Car className="w-5 h-5" />
             </div>
-            <span className="font-bold text-white">Coruña AutoImport</span>
-            <span>— Sistema de Importación Europea & Venta en A Coruña, Galicia</span>
+            <div className="min-w-0">
+              <p className="text-sm font-extrabold text-white leading-tight truncate">{state.company.name || 'Coruña AutoImport'}</p>
+              <p className="text-[10px] text-slate-500 flex items-center gap-1"><MapPin className="w-3 h-3 text-amber-500" />A Coruña · Galicia</p>
+            </div>
           </div>
+          <button onClick={() => setMenu(false)} className="lg:hidden text-slate-500 hover:text-white p-1"><X className="w-5 h-5" /></button>
+        </div>
 
-          <div className="flex items-center space-x-4 text-slate-500">
-            <span className="flex items-center space-x-1">
-              <MapPin className="w-3.5 h-3.5 text-amber-500" />
-              <span>A Coruña • Arteixo • Espíritu Santo</span>
-            </span>
-            <span>•</span>
-            <span className="flex items-center space-x-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Cumplimiento Legal AEAT, DGT & Código Civil</span>
-            </span>
+        <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
+          {NAV.map((g) => (
+            <div key={g.group}>
+              <p className="px-2 mb-1.5 text-[10px] uppercase tracking-widest text-slate-600 font-bold">{g.group}</p>
+              <div className="space-y-0.5">
+                {g.items.map((it) => (
+                  <button
+                    key={it.id}
+                    onClick={() => go(it.id)}
+                    className={cx(
+                      'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
+                      view === it.id ? 'bg-amber-500/15 text-amber-300 font-semibold' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100',
+                    )}
+                  >
+                    <it.icon className="w-4 h-4 shrink-0" />
+                    <span className="flex-1 text-left">{it.label}</span>
+                    {counters[it.id] ? <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 tabular-nums">{counters[it.id]}</span> : null}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        <div className="px-4 py-3 border-t border-slate-800 space-y-2">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-slate-500 flex items-center gap-1.5"><HardDrive className="w-3.5 h-3.5" />Datos locales</span>
+            <Badge tone={ready ? 'emerald' : 'amber'}>{ready ? 'Guardado' : 'Cargando'}</Badge>
+          </div>
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-slate-500 flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" />Régimen</span>
+            <span className="text-slate-300">{LEGAL_FORM[state.company.legalForm]} · {String(state.company.vatRegime).toUpperCase()}</span>
+          </div>
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-slate-500 flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" />Stock</span>
+            <span className="text-slate-300 tabular-nums">{summary.stockCount} ud. · {eur0(summary.stockValue)}</span>
           </div>
         </div>
-      </footer>
+      </aside>
 
+      {menu && <div className="fixed inset-0 z-40 bg-slate-950/70 lg:hidden print:hidden" onClick={() => setMenu(false)} />}
+
+      {/* Main */}
+      <div className="lg:pl-64">
+        <header className="sticky top-0 z-30 lg:hidden border-b border-slate-800 bg-slate-950/90 backdrop-blur-md px-4 py-3 flex items-center justify-between print:hidden">
+          <button onClick={() => setMenu(true)} className="text-slate-300 hover:text-white p-1"><Menu className="w-5 h-5" /></button>
+          <p className="text-sm font-bold text-white">{state.company.name || 'Coruña AutoImport'}</p>
+          <Badge tone="amber">{summary.stockCount} en stock</Badge>
+        </header>
+
+        <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
+          {view === 'dashboard' && <DashboardView go={go} editVehicle={editVehicle} />}
+          {view === 'fleet' && <FleetView autoOpenId={openVehicleId} onAutoOpened={() => setOpenVehicleId(null)} />}
+          {view === 'catalog' && <CatalogView onSimulate={openSimulator} />}
+          {view === 'simulator' && <ImportSimulatorView key={simSeed ? simSeed.at : 'sim'} seed={simSeed} />}
+          {view === 'crm' && <CrmView vehicles={state.vehicles} editVehicle={editVehicle} />}
+          {view === 'accounting' && <AccountingView />}
+          {view === 'taxes' && <TaxView />}
+          {view === 'documents' && <DocumentsView />}
+          {view === 'invoices' && <InvoicesView />}
+          {view === 'reports' && <ReportsView />}
+          {view === 'guides' && <GuidesView vehicles={state.vehicles} />}
+          {view === 'settings' && <SettingsView />}
+        </main>
+
+        <footer className="border-t border-slate-800/80 bg-slate-900/60 py-6 mt-8 print:hidden">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-[11px] text-slate-500">
+            <p>
+              <span className="text-slate-300 font-semibold">{state.company.name || 'Coruña AutoImport'}</span> — gestión de importación y venta de vehículos.
+              Datos guardados únicamente en este navegador.
+            </p>
+            <p className="flex flex-wrap items-center gap-2">
+              <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-amber-500" />A Coruña · Arteixo · Espíritu Santo</span>
+              <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />Tablas {new Date().getFullYear()} · AEAT, ATRIGA, DGT</span>
+            </p>
+          </div>
+        </footer>
+      </div>
+
+      <Toasts toasts={toasts} />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <StoreProvider>
+      <Shell />
+    </StoreProvider>
   );
 }

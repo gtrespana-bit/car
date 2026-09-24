@@ -80,12 +80,13 @@ export function getIedmtBase({ method, purchasePrice, newPrice, year, co2 }) {
 }
 
 // Impuesto de Tracción Mecánica (IVTM) Concello de A Coruña aproximado anual
+// Cuotas 2026 de la Ordenanza Fiscal nº 52 del Concello da Coruña
 export function getCorunaIvtm(cvf) {
   const power = Number(cvf) || 12;
-  if (power < 8) return 25.24;
-  if (power < 12) return 68.16;
-  if (power < 16) return 143.88;
-  if (power < 20) return 179.22;
+  if (power < 8) return 19.50;
+  if (power < 12) return 62.62;
+  if (power < 16) return 132.19;
+  if (power < 20) return 179.20;
   return 224.00;
 }
 
@@ -123,7 +124,7 @@ export function calculateIrpfOnGain(gain) {
 
   if (remaining <= 0) return tax;
 
-  // Tramo 5: Más de 300.000 € al 30%
+  // Tramo 5: Más de 300.000 € al 30 % (Ley 7/2024, desde el ejercicio 2025)
   tax += remaining * 0.30;
 
   return tax;

@@ -11,7 +11,7 @@
 //    en Galicia para un ejemplar de 4-6 años y 80-120k km.
 // ============================================================================
 
-import { computeCvf } from '../utils/calculations';
+import { computeCvf } from '../utils/calculations.js';
 
 const V = (o) => ({
   transmission: "Automático",
@@ -25,156 +25,12 @@ const V = (o) => ({
   cvf: o.cvf ?? Number(computeCvf(o.cc, o.cyl ?? 4).toFixed(2)),
 });
 
-// --- Textos reutilizables de fiabilidad -----------------------------------
-const R = {
-  EA288: {
-    reliability: "gold",
-    reliabilityTitle: "MOTOR ROCA VAG: 2.0 TDI EA288",
-    reliabilityNote: "Correa de distribución tradicional seca (intervalo 210.000 km), inyección Bosch y cajas DSG DQ381/DQ250 de embragues húmedos. Durabilidad +400.000 km. El coche más demandado y rápido de vender en Galicia.",
-  },
-  EA211_15: {
-    reliability: "gold",
-    reliabilityTitle: "MOTOR FIABLE VAG: 1.5 TSI EA211 evo",
-    reliabilityNote: "Correa seca, inyección directa + indirecta y DSG DQ381 húmeda en la versión 150 CV. Evitar unidades pre-2019 con tirones en frío (actualización de software resuelta).",
-  },
-  EA211_10: {
-    reliability: "ok",
-    reliabilityTitle: "MOTOR CORRECTO: 1.0 TSI EA211 (3 cil.)",
-    reliabilityNote: "Motor fiable con correa seca. Si es automático monta DSG DQ200 de embragues SECOS: exigir historial de la mecatrónica y probar en atasco. Preferible manual.",
-  },
-  B47: {
-    reliability: "gold",
-    reliabilityTitle: "MOTOR ROCA BMW: B47 2.0d + ZF 8HP",
-    reliabilityNote: "Distribución rediseñada respecto al N47, acoplado a la caja automática ZF 8HP de convertidor de par (la mejor del mercado). Fiabilidad de referencia en su categoría.",
-  },
-  N47: {
-    reliability: "banned",
-    reliabilityTitle: "ATENCIÓN: MOTOR BMW N47 2.0d (2007 - mediados 2015)",
-    reliabilityNote: "Cadena de distribución trasera con guías y piñones defectuosos: se estira y rompe (reparación 3.000-4.500 € porque va pegada a la caja). Exigir SIEMPRE bloque B47 (Euro 6, desde mediados de 2015).",
-  },
-  HSD: {
-    reliability: "gold",
-    reliabilityTitle: "MOTOR INDESTRUCTIBLE: Toyota Hybrid HSD",
-    reliabilityNote: "Ciclo Atkinson con cadena, sin turbo, sin embrague, sin alternador ni motor de arranque. e-CVT planetaria sin desgaste. Etiqueta ECO: 0 % IEDMT y bonificación IVTM. Cero averías.",
-  },
-  OM654: {
-    reliability: "gold",
-    reliabilityTitle: "MOTOR PREMIUM: Mercedes OM654 2.0d",
-    reliabilityNote: "Bloque de aluminio con recubrimiento NANOSLIDE, pistones de acero, muy silencioso y de bajo consumo. Cajas 8G-DCT (húmeda) o 9G-Tronic. Superior en todo al antiguo 2.1 OM651.",
-  },
-  OM651: {
-    reliability: "warn",
-    reliabilityTitle: "PRECAUCIÓN: Mercedes 2.1 CDI OM651",
-    reliabilityNote: "Fiable en general pero ruidoso; unidades pre-2012 con fallos de inyectores Delphi y cadena de distribución. Post-2016 (Euro 6) aceptable. Preferir OM654 si el precio es similar.",
-  },
-  U3_CRDI: {
-    reliability: "gold",
-    reliabilityTitle: "JOYA COREANA: 1.6 CRDi Smartstream U3 48V",
-    reliabilityNote: "Distribución por cadena robusta, consumo real 5,1 l/100 km, Etiqueta ECO (0 % IEDMT + bonificación IVTM) y equipamiento N-Line / GT-Line. Margen neto muy alto en A Coruña.",
-  },
-  U2_CRDI: {
-    reliability: "ok",
-    reliabilityTitle: "MOTOR CORRECTO: 1.6 CRDi U2 (pre-2018)",
-    reliabilityNote: "Motor diésel sencillo y fiable con correa (cambiar cada 90.000 km). Sin etiqueta ECO (C). Vigilar EGR y FAP en unidades muy urbanas.",
-  },
-  R22: {
-    reliability: "gold",
-    reliabilityTitle: "TITÁN COREANO: 2.2 CRDi bloque 'R'",
-    reliabilityNote: "Bloque de fundición indestructible (200 CV / 440 Nm) con doble cadena de distribución. 7 plazas reales y 4x4. Muy cotizado por familias y rural gallego.",
-  },
-  GDI16: {
-    reliability: "warn",
-    reliabilityTitle: "ADVERTENCIA: 1.6 GDI atmosférico Hyundai/Kia (132 CV)",
-    reliabilityNote: "Motor perezoso (160 Nm) para mover un SUV en las cuestas gallegas, gasta 9-9,5 l/100 km en autovía y genera reclamaciones. Busca el 1.6 CRDi diésel o el 1.6 T-GDI turbo.",
-  },
-  PURETECH: {
-    reliability: "banned",
-    reliabilityTitle: "ALERTA MÁXIMA: Stellantis 1.2 PureTech (EB2)",
-    reliabilityNote: "Correa de distribución húmeda que se degrada en el aceite, tapona la chupona de la bomba, endurece el pedal de freno y gripa el motor. Plataforma masiva de afectados. PROHIBIDO importar.",
-  },
-  BLUEHDI15: {
-    reliability: "banned",
-    reliabilityTitle: "ALERTA: Stellantis 1.5 BlueHDi (DV5)",
-    reliabilityNote: "Cadena de 7 mm entre árboles de levas subdimensionada (rotura + válvulas dobladas) y depósito de AdBlue que cristaliza (~1.200 €). PROHIBIDO importar.",
-  },
-  DW10: {
-    reliability: "ok",
-    reliabilityTitle: "MOTOR CORRECTO: 2.0 HDi / BlueHDi DW10 (150-180 CV)",
-    reliabilityNote: "El 2.0 francés SÍ es fiable (a diferencia del 1.5). Vigilar depósito de AdBlue y caja EAT8 con mantenimiento. Aceptable con historial completo.",
-  },
-  TCE12: {
-    reliability: "banned",
-    reliabilityTitle: "ALERTA MÁXIMA: Renault/Nissan 1.2 TCe / DIG-T (H5Ft)",
-    reliabilityNote: "Segmentos con fuga: consumo de 1 l de aceite cada 800 km, autodetonación (LSPI) y rotura de válvulas. Causa directa de demandas por vicios ocultos. PROHIBIDO importar.",
-  },
-  DCI16_BI: {
-    reliability: "banned",
-    reliabilityTitle: "ALERTA: Renault 1.6 dCi BiTurbo (R9M 160)",
-    reliabilityNote: "Roturas del turbo de baja presión, fisuras en culata y bloque por sobretemperatura. Evitar en Espace, Talisman, Trafic y Vivaro 2014-2018.",
-  },
-  K9K: {
-    reliability: "gold",
-    reliabilityTitle: "MOTOR ETERNO: Renault 1.5 dCi K9K (Gen 8)",
-    reliabilityNote: "Diésel de referencia por sencillez y consumo (4,5 l/100 km). Cambiar correa cada 120.000 km / 6 años. Vigilar inyectores en unidades pre-2012.",
-  },
-  ECOBOOST10: {
-    reliability: "banned",
-    reliabilityTitle: "ALERTA: Ford 1.0 EcoBoost 'Fox' (hasta 2019)",
-    reliabilityNote: "Correa de distribución y de bomba de aceite bañadas en aceite que se degradan y destruyen el motor. Solo aceptable el 1.0 EcoBoost mHEV (2020+) que volvió a cadena.",
-  },
-  POWERSHIFT: {
-    reliability: "banned",
-    reliabilityTitle: "ALERTA: Caja Ford Powershift 6DCT250 (doble embrague seco)",
-    reliabilityNote: "Tirones severos, sobrecalentamiento y rotura de mecatrónica. Evitar Focus / C-Max / Mondeo / S-Max automáticos pre-2018/19.",
-  },
-  INGENIUM: {
-    reliability: "banned",
-    reliabilityTitle: "ALERTA: Jaguar/Land Rover 2.0 Diésel Ingenium (AJ200D)",
-    reliabilityNote: "Cadena de distribución trasera con patines frágiles que rompe antes de 100.000 km, holgura del turbo y dilución de gasóleo en el aceite. Altísimo riesgo. PROHIBIDO importar.",
-  },
-  BITDI: {
-    reliability: "banned",
-    reliabilityTitle: "FALLO CATASTRÓFICO: VW 2.0 BiTDI 180/204 CV (CFCA / CXEB)",
-    reliabilityNote: "El enfriador de EGR se desintegra y sus virutas rayan los cilindros: 1 l de aceite cada 200 km y motor nuevo (10.000 €). Comprar SOLO la 150 CV monoturbo (CXFA/DNAA).",
-  },
-  T6_150: {
-    reliability: "gold",
-    reliabilityTitle: "LA REINA CAMPER: VW T6 2.0 TDI 150 CV monoturbo",
-    reliabilityNote: "Bloque CXFA/DNAA indestructible con cambio manual o DSG DQ500 (húmeda, 7 vel.). Mayor retención de precio de España en Galicia (surf, ciclismo, camper).",
-  },
-  MULTIAIR: {
-    reliability: "banned",
-    reliabilityTitle: "ALERTA: Jeep/Fiat 1.4 MultiAir / 1.6 MJet (2015-2019)",
-    reliabilityNote: "Fallos en electroválvulas MultiAir, cajas DDCT problemáticas y anomalías eléctricas crónicas CAN-Bus. Evitar Renegade / Compass / 500X de esos años.",
-  },
-  SKYACTIV: {
-    reliability: "gold",
-    reliabilityTitle: "MOTOR JAPONÉS: Mazda 2.0 Skyactiv-G",
-    reliabilityNote: "Atmosférico de cadena sin turbo ni FAP. Fiabilidad extrema de la vieja escuela. Versiones M-Hybrid 2019+ con Etiqueta ECO.",
-  },
-  KAPPA_HEV: {
-    reliability: "gold",
-    reliabilityTitle: "HÍBRIDO FIABLE: Hyundai/Kia 1.6 GDI HEV (Kappa) + 6-DCT",
-    reliabilityNote: "Ciclo Atkinson + eléctrico con cambio de doble embrague real (no CVT). Etiqueta ECO. Buena fiabilidad y 0 % IEDMT.",
-  },
-  GD_TOYOTA: {
-    reliability: "gold",
-    reliabilityTitle: "INDESTRUCTIBLE: Toyota 2.4 / 2.8 D-4D (2GD / 1GD)",
-    reliabilityNote: "Motores de chasis de largueros con cadena. Vigilar el DPF en uso urbano y el intervalo de la correa de accesorios. Depreciación nula en el rural gallego.",
-  },
-  CVT_XTRONIC: {
-    reliability: "banned",
-    reliabilityTitle: "ALERTA: Nissan cambio CVT X-Tronic (Jatco)",
-    reliabilityNote: "Variador continuo por correa metálica que patina y rompe (4.500 €). Evitar Qashqai / X-Trail / Juke automáticos.",
-  },
-  MHEV_ECOBOOST: {
-    reliability: "ok",
-    reliabilityTitle: "MOTOR CORRECTO: Ford 1.0 EcoBoost mHEV (2020+, cadena)",
-    reliabilityNote: "Ford abandonó la correa húmeda en la versión microhíbrida. Aceptable con libro de mantenimiento. Etiqueta ECO.",
-  },
-};
+import R, { RELIABILITY_LEVELS } from './catalog/reliability.js';
+import { GENERATED_DB } from './catalog/index.js';
 
-export const VEHICLE_DB = [
+export { R as RELIABILITY_NOTES, RELIABILITY_LEVELS };
+
+export const CURATED_DB = [
   // ======================== VOLKSWAGEN ====================================
   V({ id: "vw-golf75-20tdi", brand: "Volkswagen", model: "Golf 7.5", segment: "Compacto", version: "2.0 TDI 150 CV DSG (R-Line / Highline)", engine: "2.0 TDI EA288 (DFGA)", fuel: "Diésel", years: [2017, 2020], cv: 150, cc: 1968, co2: 118, badge: "C", newPrice: 31500, dePrice: [12500, 16000], esPrice: [17500, 20500], ...R.EA288 }),
   V({ id: "vw-golf75-15tsi", brand: "Volkswagen", model: "Golf 7.5", segment: "Compacto", version: "1.5 TSI EVO 150 CV DSG", engine: "1.5 TSI EA211 evo (DADA)", fuel: "Gasolina", years: [2017, 2020], cv: 150, cc: 1498, co2: 122, badge: "C", newPrice: 29800, dePrice: [12000, 15500], esPrice: [16900, 19900], ...R.EA211_15 }),
@@ -302,6 +158,14 @@ export const VEHICLE_DB = [
   V({ id: "jeep-renegade-14multiair", brand: "Jeep", model: "Renegade / Compass", segment: "B-SUV", version: "1.4 MultiAir 140 / 170 CV DDCT Limited", engine: "1.4 MultiAir Turbo + DDCT", fuel: "Gasolina", years: [2015, 2019], cv: 140, cc: 1368, co2: 140, badge: "C", newPrice: 27500, dePrice: [10500, 15000], esPrice: [14500, 19900], ...R.MULTIAIR }),
   V({ id: "jeep-compass-16mjet", brand: "Jeep", model: "Compass (MP)", segment: "C-SUV", version: "1.6 MultiJet 120 CV Manual Longitude", engine: "1.6 MultiJet II", fuel: "Diésel", years: [2017, 2020], cv: 120, cc: 1598, co2: 117, badge: "C", newPrice: 30500, dePrice: [12000, 16500], esPrice: [16500, 21900], transmission: "Manual", ...R.MULTIAIR }),
 ];
+
+// ---------------------------------------------------------------------------
+//  BASE DE DATOS COMPLETA = ficha curada (precios verificados a mano) +
+//  catálogo ampliado generado desde los datos de homologación.
+// ---------------------------------------------------------------------------
+export const VEHICLE_DB = [...CURATED_DB, ...GENERATED_DB];
+export const CURATED_COUNT = CURATED_DB.length;
+export const GENERATED_COUNT = GENERATED_DB.length;
 
 // ---------------------------------------------------------------------------
 // Utilidades de búsqueda / autocompletado
