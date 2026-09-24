@@ -28,8 +28,11 @@ El proyecto se divide en dos fases bien diferenciadas para minimizar riesgos, va
 ## 💻 ERP de gestión (React 19 + Vite + Tailwind v4)
 
 Aplicación de back-office pensada para **usarla a diario**, no como calculadora puntual.
-Los datos se guardan en el navegador (IndexedDB, con copia en localStorage y respaldo JSON
-exportable); no hay servidor ni se envía nada a ningún sitio.
+Los datos se guardan en **Supabase** (Postgres + Storage, UE) con acceso por usuario y
+**roles** (`owner`, `manager`, `sales`, `accountant`) y seguridad por filas (RLS): los mismos
+datos en el móvil y en el portátil, y preparado para incorporar más personas en la Fase 2.
+Sin credenciales, la app funciona en modo local (IndexedDB) con respaldo JSON exportable.
+Puesta en marcha en [`docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md`](docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md).
 
 | Módulo | Qué hace |
 | --- | --- |
@@ -70,6 +73,19 @@ autónomos por tramo, escala autonómica gallega del IRPF, bonificación del ITP
 eléctricos) están marcadas como estimación dentro de la propia aplicación y listadas en
 *Ajustes → Fuentes y verificación*.
 
+### Datos, usuarios y roles
+
+- **Supabase** (Postgres + Storage, región UE) como única fuente de verdad. Requiere conexión.
+- **Acceso** por correo y contraseña. Al registrarse se crea la empresa del usuario (rol `owner`);
+  si su correo estaba invitado, entra en la empresa que le invitó con el rol asignado.
+- **Roles** `owner` / `manager` / `sales` / `accountant` con seguridad por filas (RLS) en la base
+  de datos. La interfaz de gestión de equipo llegará en la Fase 2; hoy se invita desde la tabla
+  `invitations` de Supabase.
+- **Migración** de los datos que la versión anterior guardaba en el navegador: la app los
+  detecta y ofrece subirlos a la nube.
+- Esquema en `supabase/migrations/`; guía completa en
+  [`docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md`](docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md).
+
 ### Garantía técnica
 
 ```bash
@@ -93,7 +109,9 @@ El proyecto está **100% preparado y optimizado para desplegarse en Vercel** en 
    - **Framework Preset**: `Vite`
    - **Build Command**: `npm run build`
    - **Output Directory**: `dist`
-5. Pulsa en **"Deploy"**. En menos de 40 segundos tu aplicación estará publicada en producción con HTTPS gratuito y CDN global.
+5. **Antes de desplegar**, en *Environment Variables* añade `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`
+   (ver [`docs/09`](docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md)). Sin ellas la app arranca en modo local (datos solo en el navegador).
+6. Pulsa en **"Deploy"**. En menos de 40 segundos tu aplicación estará publicada en producción con HTTPS gratuito y CDN global.
 
 ### Opción B: Mediante Vercel CLI
 ```bash
@@ -108,7 +126,9 @@ vercel --prod
 ```
 
 ### Configuración incluida en el repositorio:
-- `vercel.json`: Incluye las reglas de reescritura (`rewrites`) para Single-Page Applications (SPA), garantizando que cualquier recarga de página o enlace directo funcione sin errores 404.
+- `vercel.json`: Reglas de reescritura (`rewrites`) para SPA (recargas y enlaces directos sin 404) y un **cron diario** que llama a `api/keepalive.js` para que el proyecto gratuito de Supabase no se pause por inactividad.
+- `api/keepalive.js`: única función de servidor; hace una consulta trivial a Supabase. Comprobable en `https://TU-DOMINIO/api/keepalive`.
+- `.env.example`: plantilla de las variables de entorno. Copiar como `.env.local` para desarrollo (no se sube a Git).
 - `package.json`: Scripts `dev`, `build`, `preview`, `check`, `catalog:stats` y `smoke`.
 - `dist`: Compilación limpia verificada sin errores de TypeScript ni dependencias faltantes.
 
@@ -117,6 +137,9 @@ vercel --prod
 ## 💻 Desarrollo Local
 
 ```bash
+# 0. Credenciales de Supabase (opcional: sin ellas, modo local con IndexedDB)
+cp .env.example .env.local   # y rellena VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY
+
 # 1. Instalar dependencias
 npm install
 
@@ -149,3 +172,4 @@ En el directorio `/docs` dispones de la biblioteca estratégica completa:
 6. [`docs/06_GUIA_MOTORES_FIABILIDAD_Y_ROTACION.md`](docs/06_GUIA_MOTORES_FIABILIDAD_Y_ROTACION.md): Guía de motores roca vs lista negra (PureTech, BlueHDi, 1.2 TCe, EcoBoost pre-2020, N47, Ingenium).
 7. [`docs/07_MATRIZ_MODELOS_GANADORES_VS_PROHIBIDOS.md`](docs/07_MATRIZ_MODELOS_GANADORES_VS_PROHIBIDOS.md): Matriz maestra por segmentos (Cupra Formentor, C-HR, Tucson, RAV4, Caddy, T6 150 CV, Duster 4x4, Mercedes 200d OM654, BMW Serie 1 F20 LCI, etc.).
 8. [`docs/08_MANUAL_USO_ERP.md`](docs/08_MANUAL_USO_ERP.md): **Manual de uso del ERP**: cómo se opera cada módulo en el día a día, calendario de modelos tributarios, cifras verificadas de 2026 y las que hay que comprobar antes de declarar.
+9. [`docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md`](docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md): **Base de datos y usuarios**: esquema en Supabase, roles y permisos, alta e invitación de usuarios, variables de entorno y solución de problemas.

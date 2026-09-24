@@ -4,9 +4,40 @@ Este documento explica cómo se usa la aplicación para **operar de verdad**: da
 coche, saber cuánto cuesta traerlo, qué impuestos paga, a qué precio venderlo, qué papeles
 faltan, qué modelos hay que presentar y cuánto dinero entra y sale.
 
-> **Importante sobre los datos.** La aplicación no tiene servidor: todo se guarda en tu
-> navegador (IndexedDB, con copia en localStorage). No se envía nada a ningún sitio.
-> Exporta un respaldo JSON desde *Ajustes → Datos y respaldo* con regularidad.
+> **Importante sobre los datos.** La aplicación guarda todo en la nube (Supabase, servidores
+> en la UE): los mismos datos en el móvil y en el ordenador, con acceso por usuario y rol.
+> Necesita conexión. Exporta un respaldo JSON desde *Ajustes → Datos y respaldo* de vez en
+> cuando: es tu copia independiente del proveedor. Detalles técnicos, roles e invitaciones en
+> [`09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md`](09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md).
+
+---
+
+## 0. Entrar en la aplicación
+
+- **Primera vez:** pestaña *Crear cuenta* → tu nombre, el nombre de la empresa, correo y
+  contraseña. Si el proyecto tiene activada la confirmación por correo, abre el enlace que
+  recibirás y vuelve a entrar. Se crea tu empresa y eres su **propietario**.
+- **Siguientes veces:** *Entrar* con correo y contraseña. La sesión se recuerda en el
+  dispositivo.
+- **Contraseña olvidada:** pestaña *Recuperar*; el correo trae un enlace que abre la app
+  pidiendo la nueva contraseña.
+- **Si te han invitado:** crea la cuenta con **el mismo correo** al que te invitaron y
+  entrarás directamente en esa empresa con el rol que te asignaron.
+- **Datos de la versión anterior:** si este navegador guardaba datos en local, al entrar
+  aparece un aviso amarillo para subirlos a la nube (las fotos hay que volver a subirlas).
+- En la barra lateral ves tu correo, tu rol, el estado *Sincronizado / Guardando… / Error* y
+  el botón de salir.
+
+Qué puede hacer cada rol:
+
+| | Propietario | Gestor | Comercial | Gestoría |
+| --- | :-: | :-: | :-: | :-: |
+| Ver todo | ✅ | ✅ | ✅ | ✅ |
+| Flota, clientes, tareas, fotos | ✅ | ✅ | ✅ | — |
+| Gastos, impuestos, facturas | ✅ | ✅ | — | — |
+| Ajustes de empresa y tarifas | ✅ | ✅ | — | — |
+| Importar respaldo, ejemplos, borrar todo | ✅ | — | — | — |
+| Equipo e invitaciones | ✅ | — | — | — |
 
 ---
 
