@@ -125,6 +125,12 @@ empresa activa (`localStorage`). El selector de empresa en la interfaz se añadi
 
 - Plan **Free**: suficiente para la Fase 1. Ojo: **se pausa tras 7 días sin actividad**; se
   reactiva desde el panel sin pérdida de datos. Entrar en la app cuenta como actividad.
+  Para evitarlo, un **cron de Vercel** (`crons` en `vercel.json`) llama **cada día a las 06:00
+  UTC** a la función [`api/keepalive.js`](../api/keepalive.js), que hace una consulta trivial.
+  Usa las mismas variables `VITE_SUPABASE_*` del proyecto de Vercel. Se puede comprobar a mano
+  abriendo `https://TU-DOMINIO/api/keepalive` (responde `{"ok":true,...}`) y ver las ejecuciones
+  en Vercel → *Settings → Cron Jobs*. En el plan Hobby de Vercel los crons se ejecutan a diario
+  con cierta tolerancia horaria, más que suficiente para una ventana de 7 días.
 - Plan **Pro** (25 $/mes): sin pausa, copias de seguridad diarias, más almacenamiento. Razonable
   al abrir local en Fase 2.
 - Copias: además de las de Supabase, exporta el JSON desde *Ajustes* de vez en cuando. Es tu
