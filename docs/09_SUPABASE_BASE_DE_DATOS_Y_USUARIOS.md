@@ -6,6 +6,37 @@ scripts de prueba. El estado en memoria es idéntico en los dos casos: las vista
 
 ---
 
+## 0. Estado actual y QUÉ HACER AHORA
+
+**Hecho (24/09/2026):**
+
+- [x] Esquema SQL ejecutado en el proyecto `ifbbzhotgvjsrohwywep` (tablas, roles, RLS, bucket de fotos).
+- [x] *Site URL* configurada en Supabase → Authentication.
+- [x] Código de la app migrado a Supabase (auth, repositorio, fotos, migración de datos locales).
+- [x] Cron de Vercel para que el plan gratuito no se pause (`api/keepalive.js`).
+- [x] `.env.local` con las credenciales para desarrollo (no se sube a Git).
+
+**Pendiente, en este orden:**
+
+1. **Fusionar el pull request** de la rama `arena/01a0d566-car` en `main` (GitHub).
+2. **Vercel → Settings → Environment Variables**: añadir `VITE_SUPABASE_URL` y
+   `VITE_SUPABASE_ANON_KEY` en Production, Preview y Development. Después, **Redeploy**
+   (sin redeploy, la compilación actual no lleva las variables y la app arranca en "Datos locales").
+3. **Supabase → Authentication → URL Configuration → Redirect URLs**: comprobar que están el
+   dominio de producción (sin barra final), `http://localhost:5173` y `https://*.vercel.app`.
+4. **Crear tu cuenta** en la app desplegada (*Crear cuenta*). Confirmar el correo si se pide.
+   Comprobar en la barra lateral: tu correo, rol **Propietario** y estado **Sincronizado**.
+5. **Subir los datos antiguos** si aparece el aviso amarillo (o importar tu respaldo JSON desde
+   *Ajustes → Datos y respaldo → Restaurar desde archivo*). Volver a subir las fotos.
+6. **Comprobar el cron**: abrir `https://TU-DOMINIO/api/keepalive` → `{"ok":true,...}`.
+7. **Primera prueba real**: dar de alta un vehículo en el móvil y verlo en el ordenador.
+
+**Después (Fase 2, cuando haga falta):** interfaz de equipo e invitaciones, selector de empresa
+para usuarios con varias, ocultar costes al rol comercial, plan Pro de Supabase por las copias
+de seguridad diarias.
+
+---
+
 ## 1. Puesta en marcha (una sola vez)
 
 ### 1.1 Ejecutar el esquema

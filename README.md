@@ -73,6 +73,19 @@ autónomos por tramo, escala autonómica gallega del IRPF, bonificación del ITP
 eléctricos) están marcadas como estimación dentro de la propia aplicación y listadas en
 *Ajustes → Fuentes y verificación*.
 
+### Datos, usuarios y roles
+
+- **Supabase** (Postgres + Storage, región UE) como única fuente de verdad. Requiere conexión.
+- **Acceso** por correo y contraseña. Al registrarse se crea la empresa del usuario (rol `owner`);
+  si su correo estaba invitado, entra en la empresa que le invitó con el rol asignado.
+- **Roles** `owner` / `manager` / `sales` / `accountant` con seguridad por filas (RLS) en la base
+  de datos. La interfaz de gestión de equipo llegará en la Fase 2; hoy se invita desde la tabla
+  `invitations` de Supabase.
+- **Migración** de los datos que la versión anterior guardaba en el navegador: la app los
+  detecta y ofrece subirlos a la nube.
+- Esquema en `supabase/migrations/`; guía completa en
+  [`docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md`](docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md).
+
 ### Garantía técnica
 
 ```bash
@@ -96,7 +109,9 @@ El proyecto está **100% preparado y optimizado para desplegarse en Vercel** en 
    - **Framework Preset**: `Vite`
    - **Build Command**: `npm run build`
    - **Output Directory**: `dist`
-5. Pulsa en **"Deploy"**. En menos de 40 segundos tu aplicación estará publicada en producción con HTTPS gratuito y CDN global.
+5. **Antes de desplegar**, en *Environment Variables* añade `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`
+   (ver [`docs/09`](docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md)). Sin ellas la app arranca en modo local (datos solo en el navegador).
+6. Pulsa en **"Deploy"**. En menos de 40 segundos tu aplicación estará publicada en producción con HTTPS gratuito y CDN global.
 
 ### Opción B: Mediante Vercel CLI
 ```bash
@@ -111,7 +126,9 @@ vercel --prod
 ```
 
 ### Configuración incluida en el repositorio:
-- `vercel.json`: Incluye las reglas de reescritura (`rewrites`) para Single-Page Applications (SPA), garantizando que cualquier recarga de página o enlace directo funcione sin errores 404.
+- `vercel.json`: Reglas de reescritura (`rewrites`) para SPA (recargas y enlaces directos sin 404) y un **cron diario** que llama a `api/keepalive.js` para que el proyecto gratuito de Supabase no se pause por inactividad.
+- `api/keepalive.js`: única función de servidor; hace una consulta trivial a Supabase. Comprobable en `https://TU-DOMINIO/api/keepalive`.
+- `.env.example`: plantilla de las variables de entorno. Copiar como `.env.local` para desarrollo (no se sube a Git).
 - `package.json`: Scripts `dev`, `build`, `preview`, `check`, `catalog:stats` y `smoke`.
 - `dist`: Compilación limpia verificada sin errores de TypeScript ni dependencias faltantes.
 
@@ -120,6 +137,9 @@ vercel --prod
 ## 💻 Desarrollo Local
 
 ```bash
+# 0. Credenciales de Supabase (opcional: sin ellas, modo local con IndexedDB)
+cp .env.example .env.local   # y rellena VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY
+
 # 1. Instalar dependencias
 npm install
 
