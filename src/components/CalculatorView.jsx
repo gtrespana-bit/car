@@ -20,11 +20,15 @@ import {
 import { 
   getIedmtRate, 
   getCorunaIvtm, 
-  getBoeDepreciation, 
+  getIedmtBase,
   calculateIrpfOnGain, 
   formatEuro, 
   formatEuroDetailed 
 } from '../utils/calculations';
+import VehicleSearch from './VehicleSearch';
+import ReferenceTablesPanel from './ReferenceTablesPanel';
+import { VEHICLE_DB, getBrands, getModelsForBrand, getVersionsFor } from '../data/vehicleDatabase';
+import { detectEngineRisk } from '../utils/engineGuardian';
 
 const PRESETS = [
   {
@@ -49,6 +53,7 @@ const PRESETS = [
     maintCost: 150,
     targetPrice: 17900,
     badge: "C (Verde)",
+    dbId: "vw-golf75-20tdi",
     imageUrl: "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=1200&q=80"
   },
   {
@@ -73,6 +78,7 @@ const PRESETS = [
     maintCost: 150,
     targetPrice: 22900,
     badge: "ECO (Microhíbrido)",
+    dbId: "hyundai-tucson-tl-16crdi-48v",
     imageUrl: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80"
   },
   {
@@ -97,6 +103,7 @@ const PRESETS = [
     maintCost: 150,
     targetPrice: 21900,
     badge: "ECO (Microhíbrido)",
+    dbId: "kia-sportage-ql-16crdi-mhev",
     imageUrl: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1200&q=80"
   },
   {
@@ -121,6 +128,7 @@ const PRESETS = [
     maintCost: 200,
     targetPrice: 24500,
     badge: "C (Verde)",
+    dbId: "hyundai-santafe-dm-22crdi",
     imageUrl: "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=1200&q=80"
   },
   {
@@ -145,6 +153,7 @@ const PRESETS = [
     maintCost: 180,
     targetPrice: 22400,
     badge: "C (Verde)",
+    dbId: "bmw-x1-f48-18d",
     imageUrl: "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1200&q=80"
   },
   {
@@ -169,6 +178,7 @@ const PRESETS = [
     maintCost: 120,
     targetPrice: 18400,
     badge: "ECO (Microhíbrido/Híbrido)",
+    dbId: "toyota-corolla-18h",
     imageUrl: "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?auto=format&fit=crop&w=1200&q=80"
   },
   {
@@ -193,6 +203,7 @@ const PRESETS = [
     maintCost: 150,
     targetPrice: 26900,
     badge: "C (Verde)",
+    dbId: "cupra-formentor-15tsi",
     imageUrl: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80"
   },
   {
@@ -217,6 +228,7 @@ const PRESETS = [
     maintCost: 180,
     targetPrice: 22500,
     badge: "C (Verde)",
+    dbId: "vw-caddy4-20tdi",
     imageUrl: "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=1200&q=80"
   },
   {
@@ -241,6 +253,7 @@ const PRESETS = [
     maintCost: 180,
     targetPrice: 26500,
     badge: "C (Verde)",
+    dbId: "mb-w177-a200d",
     imageUrl: "https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=1200&q=80"
   },
   {
@@ -265,21 +278,31 @@ const PRESETS = [
     maintCost: 120,
     targetPrice: 21900,
     badge: "ECO (Microhíbrido/Híbrido)",
+    dbId: "toyota-chr-18h",
     imageUrl: "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=1200&q=80"
   }
 ];
 
 export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab }) {
+  const DEFAULT_DB = VEHICLE_DB.find(v => v.id === "hyundai-tucson-tl-16crdi-48v");
+
   // Form State
   const [formData, setFormData] = useState({
+    dbId: DEFAULT_DB?.id || null,
     brand: "Hyundai",
-    model: "Tucson",
+    model: "Tucson (TL Restyling)",
     version: "1.6 CRDi 136 CV 48V N-Line 4x2 DCT",
+    engine: DEFAULT_DB?.engine || "",
+    cc: DEFAULT_DB?.cc || 1598,
+    cyl: DEFAULT_DB?.cyl || 4,
     year: 2020,
     km: 98000,
     fuel: "Diésel Microhíbrido",
     co2: 122,
-    cvf: 11.6,
+    cvf: 11.65,
+    badge: "ECO",
+    newPrice: DEFAULT_DB?.newPrice || 32500,   // Precio medio tablas Hacienda (vehículo nuevo)
+    valuationMethod: "tablas",                 // 'tablas' | 'factura'
     originCountry: "Alemania",
     originCity: "Stuttgart",
     sellerType: "dealer", // dealer | private
@@ -299,56 +322,75 @@ export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab })
 
   const [savedNotification, setSavedNotification] = useState(false);
 
-  // Mechanical Reliability Scanner
-  const searchStr = `${formData.brand} ${formData.model} ${formData.version}`.toLowerCase();
-  
-  let engineWarning = null;
-  let engineGold = null;
+  // --- Selección desde el buscador / datalists: autocompleta todo lo técnico
+  const applyVehicle = (v, extra = {}) => {
+    setFormData(prev => ({
+      ...prev,
+      dbId: v.id,
+      brand: v.brand,
+      model: v.model,
+      version: v.version,
+      engine: v.engine,
+      cc: v.cc,
+      cyl: v.cyl,
+      fuel: v.fuel,
+      co2: v.co2,
+      cvf: v.cvf,
+      badge: v.badge,
+      newPrice: v.newPrice,
+      // Si el año actual queda fuera de la horquilla de producción, ajustamos al último año
+      year: prev.year >= v.years[0] && prev.year <= v.years[1] ? prev.year : v.years[1],
+      // Orientación de precios si hay horquilla y el usuario no la ha tocado
+      purchasePrice: v.dePrice ? Math.round((v.dePrice[0] + v.dePrice[1]) / 2 / 100) * 100 : prev.purchasePrice,
+      targetSalePrice: v.esPrice ? Math.round((v.esPrice[0] + v.esPrice[1]) / 2 / 100) * 100 : prev.targetSalePrice,
+      ...extra,
+    }));
+  };
 
-  if (searchStr.includes("puretech") || searchStr.includes("1.2 pure") || (searchStr.includes("peugeot") && searchStr.includes("1.2")) || (searchStr.includes("citroen") && searchStr.includes("1.2"))) {
-    engineWarning = "⚠️ ALERTA MECÁNICA MÁXIMA: Motor Stellantis 1.2 PureTech. Correa húmeda que se degrada en aceite, tapona la bomba y gripa el motor. Prohibido importar para proteger tu reputación.";
-  } else if (searchStr.includes("1.2 tce") || searchStr.includes("1.2 dig-t") || (searchStr.includes("qashqai") && searchStr.includes("1.2"))) {
-    engineWarning = "⚠️ ALERTA MECÁNICA MÁXIMA: Motor Renault/Nissan 1.2 TCe. Defecto grave de consumo de aceite y rotura de válvulas. Causa directa de demandas por vicios ocultos.";
-  } else if (searchStr.includes("bluehdi") || searchStr.includes("1.5 bluehdi")) {
-    engineWarning = "⚠️ ATENCIÓN: Motor Stellantis 1.5 BlueHDi. Fallos frecuentes de rotura de cadena de árboles de levas de 7 mm y cristalización del depósito de AdBlue.";
-  } else if (searchStr.includes("ingenium") || (searchStr.includes("evoque") && searchStr.includes("diesel")) || (searchStr.includes("discovery") && searchStr.includes("diesel"))) {
-    engineWarning = "⚠️ ALERTA MECÁNICA: Motor Jaguar/Land Rover 2.0 Diésel Ingenium. Rotura prematura de cadena de distribución y holgura de eje de turbo. Altísimo riesgo de avería.";
-  } else if (searchStr.includes("n47") || (searchStr.includes("bmw") && formData.year < 2015 && (searchStr.includes("320d") || searchStr.includes("118d") || searchStr.includes("120d")))) {
-    engineWarning = "⚠️ ATENCIÓN: Posible motor BMW N47 con defecto en cadena de distribución trasera. Asegúrate de que sea bloque B47 (Euro 6, a partir de mediados de 2015).";
-  } else if (searchStr.includes("1.6 gdi") && !searchStr.includes("hev") && !searchStr.includes("phev") && !searchStr.includes("tgdi")) {
-    engineWarning = "⚠️ ADVERTENCIA COREANA: El motor 1.6 GDI atmosférico (132 CV) de Hyundai/Kia se queda muy corto de fuerza para mover un SUV en Galicia (160 Nm de par) y gasta mucho en autovía. Te recomendamos buscar el 1.6 CRDi diésel (136 CV con cadena) o el 1.6 TGDI Turbo.";
-  }
+  // Cuando el usuario escribe a mano marca/modelo/versión, intentamos casar con la BD
+  const handleFreeText = (field, value) => {
+    setFormData(prev => {
+      const next = { ...prev, [field]: value, dbId: null };
+      const match = VEHICLE_DB.find(v =>
+        v.brand.toLowerCase() === String(next.brand).toLowerCase().trim() &&
+        v.model.toLowerCase() === String(next.model).toLowerCase().trim() &&
+        v.version.toLowerCase() === String(next.version).toLowerCase().trim()
+      );
+      if (match) {
+        return { ...next, dbId: match.id, engine: match.engine, cc: match.cc, cyl: match.cyl, fuel: match.fuel, co2: match.co2, cvf: match.cvf, badge: match.badge, newPrice: match.newPrice };
+      }
+      return next;
+    });
+  };
 
-  if (searchStr.includes("2.0 tdi") || searchStr.includes("ea288")) {
-    engineGold = "⭐ MOTOR ROCA VAG: 2.0 TDI EA288. Correa de distribución tradicional seca, inyección Bosch y durabilidad legendaria (+400.000 km). El coche más demandado y rápido de vender en Galicia.";
-  } else if (searchStr.includes("b47") || (searchStr.includes("bmw") && formData.year >= 2016 && (searchStr.includes("18d") || searchStr.includes("20d")))) {
-    engineGold = "⭐ MOTOR ROCA BMW: B47 2.0d acoplado a caja automática ZF 8HP. Distribución reforzada, tacto soberbio y la mejor fiabilidad de su categoría.";
-  } else if (searchStr.includes("tucson") && searchStr.includes("1.6 crdi")) {
-    engineGold = "⭐ JOYA COREANA: Hyundai Tucson 1.6 CRDi 48V (136 CV). Cadena de distribución robusta, consumo de 5,1 l/100 km, Etiqueta ECO de la DGT y equipamiento N-Line/Tecno brutal. Margen neto muy alto.";
-  } else if (searchStr.includes("sportage") && searchStr.includes("1.6 crdi")) {
-    engineGold = "⭐ JOYA COREANA: Kia Sportage 1.6 CRDi MHEV 136 CV GT-Line. Distribución por cadena, etiqueta ECO, interior de máxima calidad y reventa rapidísima en A Coruña.";
-  } else if (searchStr.includes("santa fe") && searchStr.includes("2.2")) {
-    engineGold = "⭐ TITÁN COREANO: Hyundai Santa Fe 2.2 CRDi (200 CV). Bloque R de fundición indestructible, tracción 4x4 y 7 plazas reales. Muy cotizado por familias en Galicia.";
-  } else if (searchStr.includes("hybrid") || searchStr.includes("hsd") || searchStr.includes("corolla") || searchStr.includes("yaris")) {
-    engineGold = "⭐ MOTOR INDESTRUCTIBLE: Sistema Toyota Hybrid HSD. Sin turbo, sin embrague, sin alternador. Cero averías y Etiqueta ECO oficial para circular sin restricciones.";
-  } else if (searchStr.includes("om654") || (searchStr.includes("mercedes") && searchStr.includes("200 d"))) {
-    engineGold = "⭐ MOTOR PREMIUM: Mercedes-Benz OM654 2.0d de aluminio con recubrimiento NANOSLIDE. Muy silencioso, refinado y de bajísimo consumo.";
-  } else if (searchStr.includes("skyactiv")) {
-    engineGold = "⭐ MOTOR JAPONÉS: Mazda 2.0 Skyactiv-G atmosférico con cadena. Fiabilidad extrema de la vieja escuela con Etiqueta ECO.";
-  }
+  const selectedVehicle = formData.dbId ? VEHICLE_DB.find(v => v.id === formData.dbId) : null;
+
+  // --- Guardián mecánico: usa la ficha de la BD si existe; si no, heurística por texto
+  const risk = detectEngineRisk({
+    vehicle: selectedVehicle,
+    text: `${formData.brand} ${formData.model} ${formData.version} ${formData.engine}`,
+    year: formData.year,
+  });
+  const engineWarning = risk.level === 'banned' || risk.level === 'warn' ? risk : null;
+  const engineGold = risk.level === 'gold' ? risk : null;
 
   // Dynamic calculations
-  const ageYears = Math.max(1, 2026 - Number(formData.year));
-  const depreciationFactor = getBoeDepreciation(ageYears);
-  
-  const estimatedBoeBase = Number(formData.purchasePrice) * depreciationFactor;
   const iedmtRate = getIedmtRate(formData.co2);
-  const calculatedIedmt = estimatedBoeBase * iedmtRate;
+  const valuation = getIedmtBase({
+    method: formData.valuationMethod,
+    purchasePrice: formData.purchasePrice,
+    newPrice: formData.newPrice,
+    year: formData.year,
+    co2: formData.co2,
+  });
+  const calculatedIedmt = valuation.base * iedmtRate;
+  const valorVenal = valuation.hacienda.valorVenal;
 
-  // ITP (8% in Galicia) only applies if purchased from a private seller in Europe
-  const calculatedItp = formData.sellerType === "private" ? Number(formData.purchasePrice) * 0.08 : 0;
+  // ITP (8% en Galicia) solo si se compra a particular. Base: el mayor entre precio y valor venal.
+  const itpBase = Math.max(Number(formData.purchasePrice) || 0, valorVenal || 0);
+  const calculatedItp = formData.sellerType === "private" ? itpBase * 0.08 : 0;
 
-  // IVTM Concello de A Coruña
+  // IVTM Concello de A Coruña (alta a mitad de año: 2 trimestres)
   const calculatedIvtm = getCorunaIvtm(formData.cvf) * (2 / 4);
 
   // Aggregated Cost Puesto en Coruña
@@ -375,13 +417,25 @@ export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab })
   const netProfit = grossProfit - estimatedIrpf;
   const netRoi = totalCost > 0 ? (netProfit / totalCost) * 100 : 0;
 
+  // Datalists para autocompletar campos sueltos
+  const brandOptions = getBrands();
+  const modelOptions = getModelsForBrand(formData.brand);
+  const versionOptions = getVersionsFor(formData.brand, formData.model);
+
   // Load preset
   const handleApplyPreset = (preset) => {
+    const db = preset.dbId ? VEHICLE_DB.find(v => v.id === preset.dbId) : null;
     setFormData({
       ...formData,
+      dbId: db?.id || null,
+      engine: db?.engine || "",
+      cc: db?.cc || formData.cc,
+      cyl: db?.cyl || formData.cyl,
+      badge: db?.badge || preset.badge,
+      newPrice: db?.newPrice || formData.newPrice,
       brand: preset.brand,
-      model: preset.model,
-      version: preset.version,
+      model: db?.model || preset.model,
+      version: db?.version || preset.version,
       year: preset.year,
       km: preset.km,
       fuel: preset.fuel,
@@ -410,10 +464,13 @@ export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab })
       brand: formData.brand,
       model: formData.model,
       version: formData.version,
+      engine: formData.engine,
+      dbId: formData.dbId,
+      engineRisk: risk.level,
       year: Number(formData.year),
       km: Number(formData.km),
       fuel: formData.fuel,
-      transmission: "Automático",
+      transmission: selectedVehicle?.transmission || "Automático",
       co2: Number(formData.co2),
       cvf: Number(formData.cvf),
       originCountry: formData.originCountry,
@@ -427,6 +484,10 @@ export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab })
       dgtFee: Number(formData.dgtFee),
       ivtmCost: Math.round(calculatedIvtm),
       iedmtTax: Math.round(calculatedIedmt),
+      iedmtBase: Math.round(valuation.base),
+      valuationMethod: valuation.source,
+      newPrice: Number(formData.newPrice) || null,
+      valorVenal: Math.round(valorVenal),
       itpTax: Math.round(calculatedItp),
       platesCost: Number(formData.platesCost),
       reconditioningCost: Number(formData.reconditioningCost),
@@ -441,7 +502,7 @@ export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab })
       daysToSell: null,
       imageUrl: formData.imageUrl || "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?auto=format&fit=crop&w=1200&q=80",
       vin: "PENDIENTE_" + Math.random().toString(36).substring(2, 8).toUpperCase(),
-      environmentalBadge: formData.co2 <= 110 ? "ECO" : "C (Verde)",
+      environmentalBadge: formData.badge ? (formData.badge === "ECO" ? "ECO" : "C (Verde)") : (formData.co2 <= 110 ? "ECO" : "C (Verde)"),
       notes: formData.notes || "Generado desde el Simulador de Importación.",
       docsChecklist: {
         teil1: false,
@@ -498,13 +559,18 @@ export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab })
 
       {/* Engine Reliability Guardian Banner */}
       {engineWarning && (
-        <div className="p-4 rounded-xl bg-rose-950/40 border-2 border-rose-500 text-xs text-rose-200 flex items-start space-x-3 shadow-xl">
+        <div className={`p-4 rounded-xl text-xs flex items-start space-x-3 shadow-xl ${engineWarning.level === 'banned' ? 'bg-rose-950/40 border-2 border-rose-500 text-rose-200 animate-[pulse_2.5s_ease-in-out_1]' : 'bg-amber-950/40 border-2 border-amber-500 text-amber-100'}`}>
           <XCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
           <div className="space-y-1">
             <span className="font-black text-rose-300 uppercase tracking-wider text-xs block">
-              ADVERTENCIA CRÍTICA DE FIABILIDAD MECÁNICA
+              {engineWarning.level === 'banned' ? '🚫 MODELO PROHIBIDO — ' : '⚠️ PRECAUCIÓN — '}{engineWarning.title}
             </span>
-            <p className="leading-relaxed">{engineWarning}</p>
+            <p className="leading-relaxed">{engineWarning.note}</p>
+            {engineWarning.level === 'banned' && (
+              <p className="text-[11px] text-rose-300/80 font-semibold pt-1">
+                Este motor está en la lista negra de la Guía de Fiabilidad. No lo importes: el riesgo de reclamación por vicios ocultos (art. 1484 CC) supera cualquier margen.
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -514,9 +580,9 @@ export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab })
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
           <div className="space-y-0.5">
             <span className="font-black text-emerald-300 uppercase tracking-wider text-[11px] block">
-              MECÁNICA DE MÁXIMA CALIDAD Y ROTACIÓN
+              ⭐ {engineGold.title}
             </span>
-            <p className="leading-relaxed">{engineGold}</p>
+            <p className="leading-relaxed">{engineGold.note}</p>
           </div>
         </div>
       )}
@@ -534,13 +600,36 @@ export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab })
               <span>1. Identificación y Compra en Europa</span>
             </h2>
 
+            {/* Buscador con autocompletado */}
+            <div>
+              <label className="block text-amber-300 font-bold mb-1.5 text-xs uppercase tracking-wider">
+                🔎 Buscador de vehículos — autocompleta motor, CO₂, CVF, etiqueta y valor de tablas
+              </label>
+              <VehicleSearch onSelect={(v) => applyVehicle(v)} selectedId={formData.dbId} />
+              {selectedVehicle && (
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+                  <span className="px-2 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-200"><strong className="text-white">Motor:</strong> {selectedVehicle.engine}</span>
+                  <span className="px-2 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-200"><strong className="text-white">{selectedVehicle.cc} cc</strong> · {selectedVehicle.cyl} cil. · {selectedVehicle.cv} CV</span>
+                  <span className="px-2 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-200"><strong className="text-white">Cambio:</strong> {selectedVehicle.transmission}</span>
+                  <span className="px-2 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-200"><strong className="text-white">Años:</strong> {selectedVehicle.years[0]}–{selectedVehicle.years[1]}</span>
+                  {selectedVehicle.dePrice && <span className="px-2 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-200"><strong className="text-white">Alemania:</strong> {formatEuro(selectedVehicle.dePrice[0])}–{formatEuro(selectedVehicle.dePrice[1])}</span>}
+                  {selectedVehicle.esPrice && <span className="px-2 py-1 rounded-md bg-emerald-950/40 border border-emerald-500/30 text-emerald-200"><strong className="text-emerald-100">PVP Galicia:</strong> {formatEuro(selectedVehicle.esPrice[0])}–{formatEuro(selectedVehicle.esPrice[1])}</span>}
+                </div>
+              )}
+            </div>
+
+            <datalist id="dl-brands">{brandOptions.map(b => <option key={b} value={b} />)}</datalist>
+            <datalist id="dl-models">{modelOptions.map(m => <option key={m} value={m} />)}</datalist>
+            <datalist id="dl-versions">{versionOptions.map(v => <option key={v.id} value={v.version}>{v.engine}</option>)}</datalist>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
                 <label className="block text-slate-400 font-medium mb-1">Marca</label>
                 <input
                   type="text"
+                  list="dl-brands"
                   value={formData.brand}
-                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                  onChange={(e) => handleFreeText('brand', e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-medium focus:border-amber-400 focus:outline-none"
                 />
               </div>
@@ -549,8 +638,9 @@ export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab })
                 <label className="block text-slate-400 font-medium mb-1">Modelo y Carrocería</label>
                 <input
                   type="text"
+                  list="dl-models"
                   value={formData.model}
-                  onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                  onChange={(e) => handleFreeText('model', e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-medium focus:border-amber-400 focus:outline-none"
                 />
               </div>
@@ -559,10 +649,20 @@ export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab })
                 <label className="block text-slate-400 font-medium mb-1">Versión / Motorización</label>
                 <input
                   type="text"
+                  list="dl-versions"
                   value={formData.version}
-                  onChange={(e) => setFormData({ ...formData, version: e.target.value })}
+                  onChange={(e) => handleFreeText('version', e.target.value)}
                   className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-medium focus:border-amber-400 focus:outline-none"
                 />
+                {versionOptions.length > 0 && !formData.dbId && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {versionOptions.slice(0, 6).map(v => (
+                      <button key={v.id} type="button" onClick={() => applyVehicle(v)} className={`text-[10px] px-2 py-1 rounded-md border transition-colors ${v.reliability === 'banned' ? 'bg-rose-950/40 border-rose-500/40 text-rose-300 hover:bg-rose-900/40' : 'bg-slate-800 border-slate-700 text-slate-200 hover:border-amber-500/50'}`}>
+                        {v.reliability === 'banned' ? '🚫 ' : v.reliability === 'gold' ? '⭐ ' : ''}{v.version}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -701,8 +801,9 @@ export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab })
                 />
                 <span className="text-[10px] text-slate-400 mt-1 block">
                   {formData.co2 <= 120 
-                    ? "✨ 0% Impuesto Matriculación (Exento)"
+                    ? "✨ 0% Impuesto Matriculación (Exento, Mod. 06)"
                     : `⚠️ Tramo ${(iedmtRate * 100).toFixed(2)}% Modelo 576`}
+                  {formData.badge && <span className="ml-1 text-emerald-400 font-bold">· Etiqueta {formData.badge}</span>}
                 </span>
               </div>
 
@@ -762,6 +863,50 @@ export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab })
                 />
               </div>
             </div>
+
+            {/* Valoración Hacienda para el Mod. 576 */}
+            <div className="mt-2 p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <Info className="w-3.5 h-3.5 text-amber-400" /> Base imponible del Impuesto de Matriculación
+                </span>
+                <div className="inline-flex rounded-lg overflow-hidden border border-slate-700 text-[11px] font-bold">
+                  <button type="button" onClick={() => setFormData({ ...formData, valuationMethod: 'tablas' })} className={`px-3 py-1.5 ${formData.valuationMethod === 'tablas' ? 'bg-amber-500 text-slate-950' : 'bg-slate-900 text-slate-300 hover:bg-slate-800'}`}>Tablas Hacienda</button>
+                  <button type="button" onClick={() => setFormData({ ...formData, valuationMethod: 'factura' })} className={`px-3 py-1.5 ${formData.valuationMethod === 'factura' ? 'bg-amber-500 text-slate-950' : 'bg-slate-900 text-slate-300 hover:bg-slate-800'}`}>Precio factura</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <label className="block text-slate-400 font-medium mb-1">Precio medio nuevo (tablas €)</label>
+                  <input
+                    type="number"
+                    step="500"
+                    value={formData.newPrice}
+                    onChange={(e) => setFormData({ ...formData, newPrice: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-white font-medium focus:border-amber-400 focus:outline-none"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-1 block">Orden HFP precios medios (orientativo)</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">Antigüedad · % tabla</span>
+                  <span className="text-sm font-black text-white">{valuation.hacienda.age} años · {(valuation.hacienda.depreciation * 100).toFixed(0)} %</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                  <span className="text-[10px] text-slate-400 block">Valor venal Hacienda</span>
+                  <span className="text-sm font-black text-white">{formatEuro(valorVenal)}</span>
+                </div>
+                <div className={`p-2.5 rounded-lg border ${valuation.source === 'tablas' ? 'bg-amber-500/10 border-amber-500/40' : 'bg-slate-900 border-slate-800'}`}>
+                  <span className="text-[10px] text-slate-400 block">Base 576 ({valuation.source === 'tablas' ? 'sin IVA/IEDMT' : 'declarada'})</span>
+                  <span className="text-sm font-black text-amber-400">{formatEuro(valuation.base)}</span>
+                </div>
+              </div>
+              {valuation.source === 'factura' && Number(formData.purchasePrice) < valuation.hacienda.iedmtBase && (
+                <p className="text-[10px] text-amber-300 flex items-start gap-1.5"><AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />El precio de factura está por debajo del valor de tablas: la AEAT puede comprobar valores y girar complementaria. Liquidar por tablas te blinda.</p>
+              )}
+              {valuation.source === 'tablas' && Number(formData.purchasePrice) > 0 && valuation.hacienda.iedmtBase > Number(formData.purchasePrice) && iedmtRate > 0 && (
+                <p className="text-[10px] text-sky-300 flex items-start gap-1.5"><Info className="w-3 h-3 mt-0.5 shrink-0" />Tablas &gt; precio pagado: puedes declarar por factura (valor de mercado real) y ahorrar {formatEuro((valuation.hacienda.iedmtBase - Number(formData.purchasePrice)) * iedmtRate)}, aportando factura y anuncio como prueba.</p>
+              )}
+            </div>
           </div>
 
           {/* Section 4: Puesta a Punto y Venta Final */}
@@ -809,6 +954,13 @@ export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab })
               </div>
             </div>
           </div>
+
+          {/* Tablas oficiales de referencia */}
+          <ReferenceTablesPanel
+            formData={formData}
+            valuation={valuation}
+            onApply={(patch) => setFormData(prev => ({ ...prev, ...patch }))}
+          />
 
         </div>
 
@@ -917,7 +1069,7 @@ export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab })
               </div>
 
               <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                <span className="text-slate-400">7. Impuesto Matriculación Modelo 576 AEAT</span>
+                <span className="text-slate-400">7. Impuesto Matriculación Mod. 576 <span className="text-slate-500">({(iedmtRate * 100).toFixed(2)} % s/ {formatEuro(valuation.base)} {valuation.source === 'tablas' ? 'tablas' : 'factura'})</span></span>
                 <span className={`font-semibold ${calculatedIedmt === 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
                   {calculatedIedmt === 0 ? '0,00 € (Exento)' : formatEuro(calculatedIedmt)}
                 </span>
@@ -925,7 +1077,7 @@ export default function CalculatorView({ onAddVehicleToPipeline, setActiveTab })
 
               {formData.sellerType === "private" && (
                 <div className="flex justify-between py-1.5 border-b border-slate-800/60">
-                  <span className="text-slate-400">8. ITP 8% ATRIGA Galicia (Particular)</span>
+                  <span className="text-slate-400">8. ITP 8% ATRIGA Galicia <span className="text-slate-500">(s/ {formatEuro(itpBase)}{itpBase > Number(formData.purchasePrice) ? ' valor venal' : ' precio'})</span></span>
                   <span className="font-semibold text-amber-400">{formatEuro(calculatedItp)}</span>
                 </div>
               )}
