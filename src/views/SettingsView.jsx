@@ -5,10 +5,13 @@ import { useStore } from '../lib/store.jsx';
 import { eur, eur0, numEs, todayISO, download } from '../lib/format.js';
 import { TARIFF_GROUPS, DEFAULT_TARIFFS, SOURCES, IEDMT_BRACKETS, IRPF_SAVINGS, IRPF_GENERAL_COMBINED, RETA_2026, IS_2026, ITP_GALICIA, RATES_YEAR } from '../domain/rates.js';
 import { calcReta } from '../domain/taxes.js';
-import { dbClear } from '../lib/db.js';
+import { ROLES, roleLabel } from '../lib/roles.js';
+import { useOptionalAuth } from '../lib/auth.jsx';
 
 export default function SettingsView({ initialTab = 'empresa' }) {
-  const { state, setCompany, tariffs, replaceAll, loadDemo, resetData, toast } = useStore();
+  const { state, setCompany, tariffs, replaceAll, loadDemo, resetData, toast, mode, role, can } = useStore();
+  const auth = useOptionalAuth();
+  const isCloud = mode === 'supabase';
   const [tab, setTab] = useState(initialTab);
   const [confirmReset, setConfirmReset] = useState(false);
   const [monthly, setMonthly] = useState(2500);
@@ -240,9 +243,18 @@ export default function SettingsView({ initialTab = 'empresa' }) {
                 { label: 'Registro de actividad', value: (state.activity || []).length },
               ]}
             />
-            <Alert tone="warn" className="mt-4">
-              Los datos se guardan <b>solo en este navegador</b> (IndexedDB, con copia en localStorage). No hay servidor: si borras los datos del navegador o cambias de equipo, se pierden. Exporta un respaldo JSON con regularidad.
-            </Alert>
+            {isCloud ? (
+              <Alert tone="ok" className="mt-4">
+                Los datos se guardan en la <b>nube (Supabase, servidores en la UE)</b> y se comparten entre todos tus dispositivos y usuarios de la empresa. Aun así, descarga un respaldo JSON de vez en cuando: es tu copia independiente del proveedor.
+              </Alert>
+            ) : (
+              <Alert tone="warn" className="mt-4">
+                Los datos se guardan <b>solo en este navegador</b> (IndexedDB, con copia en localStorage). No hay servidor: si borras los datos del navegador o cambias de equipo, se pierden. Exporta un respaldo JSON con regularidad.
+              </Alert>
+            )}
+            {isCloud && !can('data') && (
+              <Alert tone="info" className="mt-3">Restaurar, cargar ejemplos y borrar todo están reservados al rol <b>Propietario</b>. Tu rol actual: <b>{roleLabel(role)}</b>.</Alert>
+            )}
             <div className="flex flex-wrap gap-2 mt-4">
               <Button icon={Download} onClick={exportJson}>Descargar respaldo</Button>
               <label className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 text-slate-100 hover:bg-slate-700 border border-slate-700 text-sm px-3.5 py-2 cursor-pointer">
@@ -253,6 +265,32 @@ export default function SettingsView({ initialTab = 'empresa' }) {
               <Button variant="danger" icon={RotateCcw} onClick={() => setConfirmReset(true)}>Borrar todo</Button>
             </div>
           </Card>
+          {isCloud && (
+            <Card className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <ShieldCheck className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-bold text-white">Cuenta y equipo</h3>
+              </div>
+              <KeyValueGrid
+                cols={2}
+                items={[
+                  { label: 'Usuario', value: auth?.user?.email || '—' },
+                  { label: 'Tu rol', value: roleLabel(role) },
+                  { label: 'Empresa', value: auth?.current?.org_name || c.name || '—' },
+                  { label: 'Identificador', value: <span className="font-mono text-[10px]">{auth?.orgId || '—'}</span> },
+                ]}
+              />
+              <p className="text-[11px] text-slate-500 mt-3 mb-2">Roles disponibles (la gestión de invitaciones desde la app llegará en la Fase 2; hoy se hace desde la tabla <code>invitations</code> de Supabase):</p>
+              <div className="space-y-1.5">
+                {Object.entries(ROLES).map(([id, r]) => (
+                  <div key={id} className="flex items-start gap-2 text-xs">
+                    <Badge tone={id === role ? 'amber' : 'slate'}>{r.label}</Badge>
+                    <span className="text-slate-400">{r.description}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
           <Card className="p-4">
             <h3 className="text-sm font-bold text-white mb-3">Pegar un respaldo</h3>
             <Textarea rows={8} value={importText} onChange={setImportText} placeholder='{"schema":2,"company":{...},"vehicles":[...]}' />
@@ -328,7 +366,9 @@ export default function SettingsView({ initialTab = 'empresa' }) {
           toast('Todos los datos se han borrado');
         }}
         title="Borrar todos los datos"
-        message="Se eliminarán vehículos, contactos, gastos, modelos presentados y tareas de este navegador. Esta acción no se puede deshacer: exporta antes un respaldo JSON si quieres conservarlos."
+        message={isCloud
+          ? 'Se eliminarán de la nube vehículos, contactos, gastos, facturas, modelos presentados, tareas y fotos de tu empresa, para todos los usuarios. Esta acción no se puede deshacer: exporta antes un respaldo JSON si quieres conservarlos.'
+          : 'Se eliminarán vehículos, contactos, gastos, modelos presentados y tareas de este navegador. Esta acción no se puede deshacer: exporta antes un respaldo JSON si quieres conservarlos.'}
       />
     </div>
   );

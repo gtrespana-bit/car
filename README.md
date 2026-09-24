@@ -28,8 +28,11 @@ El proyecto se divide en dos fases bien diferenciadas para minimizar riesgos, va
 ## 💻 ERP de gestión (React 19 + Vite + Tailwind v4)
 
 Aplicación de back-office pensada para **usarla a diario**, no como calculadora puntual.
-Los datos se guardan en el navegador (IndexedDB, con copia en localStorage y respaldo JSON
-exportable); no hay servidor ni se envía nada a ningún sitio.
+Los datos se guardan en **Supabase** (Postgres + Storage, UE) con acceso por usuario y
+**roles** (`owner`, `manager`, `sales`, `accountant`) y seguridad por filas (RLS): los mismos
+datos en el móvil y en el portátil, y preparado para incorporar más personas en la Fase 2.
+Sin credenciales, la app funciona en modo local (IndexedDB) con respaldo JSON exportable.
+Puesta en marcha en [`docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md`](docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md).
 
 | Módulo | Qué hace |
 | --- | --- |
@@ -149,3 +152,4 @@ En el directorio `/docs` dispones de la biblioteca estratégica completa:
 6. [`docs/06_GUIA_MOTORES_FIABILIDAD_Y_ROTACION.md`](docs/06_GUIA_MOTORES_FIABILIDAD_Y_ROTACION.md): Guía de motores roca vs lista negra (PureTech, BlueHDi, 1.2 TCe, EcoBoost pre-2020, N47, Ingenium).
 7. [`docs/07_MATRIZ_MODELOS_GANADORES_VS_PROHIBIDOS.md`](docs/07_MATRIZ_MODELOS_GANADORES_VS_PROHIBIDOS.md): Matriz maestra por segmentos (Cupra Formentor, C-HR, Tucson, RAV4, Caddy, T6 150 CV, Duster 4x4, Mercedes 200d OM654, BMW Serie 1 F20 LCI, etc.).
 8. [`docs/08_MANUAL_USO_ERP.md`](docs/08_MANUAL_USO_ERP.md): **Manual de uso del ERP**: cómo se opera cada módulo en el día a día, calendario de modelos tributarios, cifras verificadas de 2026 y las que hay que comprobar antes de declarar.
+9. [`docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md`](docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md): **Base de datos y usuarios**: esquema en Supabase, roles y permisos, alta e invitación de usuarios, variables de entorno y solución de problemas.

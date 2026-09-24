@@ -9,9 +9,17 @@
 //   filings   → modelos tributarios con su importe calculado y su estado
 //   tasks     → avisos y vencimientos (ITV, seguro, garantía, cobros…)
 //   activity  → registro de auditoría de la última actividad
+//
+//  Persistencia: la decide `repo.js`. Con Supabase configurado y sesión
+//  iniciada, cada cambio se escribe como fila propia (cola con retardo corto y
+//  aviso si falla); sin credenciales, se guarda el estado completo en IndexedDB.
 // ============================================================================
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { dbGet, dbPut, dbClear, readFallback, readLegacyVehicles, getPhotos, putPhotos, deletePhotos } from './db.js';
+import { dbGet, readFallback, readLegacyVehicles } from './db.js';
+import { createLocalRepo, createSupabaseRepo } from './repo.js';
+import { getSupabase, describeError } from './supabase.js';
+import { useOptionalAuth } from './auth.jsx';
+import { canWrite } from './roles.js';
 import { uid, todayISO, num } from './format.js';
 import { DEFAULT_TARIFFS } from '../domain/rates.js';
 import { invoiceNumber, invoiceLines } from './templates.js';
@@ -156,42 +164,25 @@ export function normalizeState(raw = {}) {
 
 const StoreContext = createContext(null);
 
+const hasBusinessData = (s) => ['vehicles', 'contacts', 'expenses', 'invoices'].some((k) => (s?.[k] || []).length > 0);
+
 export function StoreProvider({ children }) {
-  const [state, setState] = useState(() => readFallback() ? normalizeState(readFallback()) : defaultState());
+  const auth = useOptionalAuth();
+  const remote = auth?.mode === 'supabase' && auth.orgId ? auth.orgId : null;
+  const role = remote ? auth.role : null;
+
+  const repo = useMemo(() => (remote ? createSupabaseRepo(getSupabase(), remote) : createLocalRepo()), [remote]);
+  const isRemote = repo.mode === 'supabase';
+
+  const [state, setState] = useState(() => (!isRemote && readFallback() ? normalizeState(readFallback()) : defaultState()));
   const [ready, setReady] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [sync, setSync] = useState({ status: 'idle', pending: 0, error: null, lastLoad: null });
+  const [localBackup, setLocalBackup] = useState(null); // datos antiguos del navegador pendientes de migrar
   const saveTimer = useRef(null);
-
-  // Carga inicial desde IndexedDB (+ migración de la versión anterior)
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const stored = await dbGet();
-      if (cancelled) return;
-      if (stored) {
-        setState(normalizeState(stored));
-      } else {
-        const legacy = readLegacyVehicles();
-        if (legacy && legacy.length) {
-          setState((prev) => ({ ...prev, vehicles: legacy.map(normalizeVehicle) }));
-        }
-      }
-      setReady(true);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Guardado con retardo (evita escribir en cada pulsación)
-  useEffect(() => {
-    if (!ready) return undefined;
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      dbPut(state);
-    }, 400);
-    return () => clearTimeout(saveTimer.current);
-  }, [state, ready]);
+  const pending = useRef(new Map());
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   const toast = useCallback((message, tone = 'ok') => {
     const id = uid('t');
@@ -199,55 +190,212 @@ export function StoreProvider({ children }) {
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4200);
   }, []);
 
+  // --- Carga inicial -------------------------------------------------------
+  const load = useCallback(async () => {
+    const stored = await repo.load();
+    if (stored) return normalizeState(stored);
+    if (!isRemote) {
+      const legacy = readLegacyVehicles();
+      if (legacy && legacy.length) return { ...defaultState(), vehicles: legacy.map(normalizeVehicle) };
+    }
+    return defaultState();
+  }, [repo, isRemote]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setReady(false);
+    (async () => {
+      try {
+        const next = await load();
+        if (cancelled) return;
+        setState(next);
+        setSync((s) => ({ ...s, status: 'idle', error: null, lastLoad: Date.now() }));
+        // Migración: si la nube está vacía y este navegador tenía datos, los ofrecemos
+        if (isRemote && !hasBusinessData(next)) {
+          const local = await dbGet();
+          if (!cancelled && local && hasBusinessData(local)) setLocalBackup(normalizeState(local));
+        }
+      } catch (err) {
+        if (cancelled) return;
+        console.error('[store] carga:', err);
+        setSync((s) => ({ ...s, status: 'error', error: describeError(err) }));
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [load, isRemote]);
+
+  // --- Persistencia local: estado completo con retardo ----------------------
+  useEffect(() => {
+    if (!ready || isRemote) return undefined;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => { repo.saveState(state); }, 400);
+    return () => clearTimeout(saveTimer.current);
+  }, [state, ready, isRemote, repo]);
+
+  // --- Persistencia remota: cola de escrituras por registro -----------------
+  const reloadFromServer = useCallback(async () => {
+    try {
+      const next = await load();
+      setState(next);
+      setSync((s) => ({ ...s, lastLoad: Date.now() }));
+    } catch (err) {
+      console.error('[store] recarga:', err);
+    }
+  }, [load]);
+
+  const runJob = useCallback(async (key) => {
+    const job = pending.current.get(key);
+    if (!job) return;
+    pending.current.delete(key);
+    setSync((s) => ({ ...s, status: 'saving', pending: pending.current.size }));
+    try {
+      await job.fn();
+      setSync((s) => ({ ...s, status: pending.current.size ? 'saving' : 'saved', pending: pending.current.size, error: null }));
+    } catch (err) {
+      console.error('[store] guardado:', err);
+      const msg = describeError(err);
+      setSync((s) => ({ ...s, status: 'error', pending: pending.current.size, error: msg }));
+      toast(`No se ha guardado: ${msg}`, 'error');
+      // Volvemos a la verdad del servidor para no mostrar algo que no existe
+      reloadFromServer();
+    }
+  }, [toast, reloadFromServer]);
+
+  const enqueue = useCallback((key, fn, delay = 350) => {
+    if (!isRemote) return;
+    const prev = pending.current.get(key);
+    if (prev) clearTimeout(prev.timer);
+    const timer = setTimeout(() => runJob(key), delay);
+    pending.current.set(key, { timer, fn });
+    setSync((s) => ({ ...s, status: 'saving', pending: pending.current.size }));
+  }, [isRemote, runJob]);
+
+  const flushAll = useCallback(() => {
+    for (const [key, job] of pending.current) {
+      clearTimeout(job.timer);
+      runJob(key);
+    }
+  }, [runJob]);
+
+  useEffect(() => {
+    if (!isRemote) return undefined;
+    const onHide = () => flushAll();
+    const onShow = () => {
+      // Al volver a la pestaña (otro dispositivo pudo cambiar cosas), refrescamos
+      if (document.visibilityState === 'visible' && !pending.current.size && Date.now() - (sync.lastLoad || 0) > 60_000) {
+        reloadFromServer();
+      }
+    };
+    window.addEventListener('pagehide', onHide);
+    document.addEventListener('visibilitychange', onShow);
+    return () => {
+      window.removeEventListener('pagehide', onHide);
+      document.removeEventListener('visibilitychange', onShow);
+    };
+  }, [isRemote, flushAll, reloadFromServer, sync.lastLoad]);
+
+  const guard = useCallback((collection) => {
+    if (canWrite(role, collection)) return true;
+    toast('Tu rol no permite modificar esta sección', 'error');
+    return false;
+  }, [role, toast]);
+
+  // --- API de mutación -------------------------------------------------------
   const log = useCallback((text) => {
-    setState((prev) => ({
-      ...prev,
-      activity: [{ id: uid('log'), at: new Date().toISOString(), text }, ...(prev.activity || [])].slice(0, 200),
-    }));
-  }, []);
+    const entry = { id: uid('log'), at: new Date().toISOString(), text };
+    setState((prev) => ({ ...prev, activity: [entry, ...(prev.activity || [])].slice(0, 200) }));
+    if (canWrite(role, 'activity')) enqueue(`activity:${entry.id}`, () => repo.upsert('activity', entry), 50);
+  }, [enqueue, repo, role]);
 
   const setCompany = useCallback((patch) => {
-    setState((prev) => ({ ...prev, company: { ...prev.company, ...(typeof patch === 'function' ? patch(prev.company) : patch) } }));
-  }, []);
+    if (!guard('company')) return;
+    setState((prev) => {
+      const company = { ...prev.company, ...(typeof patch === 'function' ? patch(prev.company) : patch) };
+      enqueue('company', () => repo.saveCompany(stateRef.current.company), 600);
+      return { ...prev, company };
+    });
+  }, [enqueue, repo, guard]);
 
   const updateCollection = useCallback((key, fn) => {
-    setState((prev) => ({ ...prev, [key]: fn(prev[key] || []) }));
-  }, []);
+    if (!guard(key)) return;
+    setState((prev) => {
+      const before = prev[key] || [];
+      const after = fn(before);
+      if (isRemote) {
+        const beforeById = new Map(before.map((x) => [x.id, x]));
+        const afterIds = new Set(after.map((x) => x.id));
+        after.forEach((item) => {
+          if (beforeById.get(item.id) !== item) enqueue(`${key}:${item.id}`, () => repo.upsert(key, item));
+        });
+        before.forEach((item) => {
+          if (!afterIds.has(item.id)) enqueue(`${key}:${item.id}`, () => repo.remove(key, item.id));
+        });
+      }
+      return { ...prev, [key]: after };
+    });
+  }, [enqueue, repo, isRemote, guard]);
 
   const upsert = useCallback((key, item) => {
+    if (!guard(key)) return;
     setState((prev) => {
       const list = prev[key] || [];
       const idx = list.findIndex((x) => x.id === item.id);
-      const next = idx >= 0 ? list.map((x, i) => (i === idx ? { ...x, ...item, updatedAt: todayISO() } : x)) : [item, ...list];
+      const merged = idx >= 0 ? { ...list[idx], ...item, updatedAt: todayISO() } : item;
+      const next = idx >= 0 ? list.map((x, i) => (i === idx ? merged : x)) : [merged, ...list];
+      enqueue(`${key}:${item.id}`, () => repo.upsert(key, merged));
       return { ...prev, [key]: next };
     });
-  }, []);
+  }, [enqueue, repo, guard]);
 
   const remove = useCallback((key, id) => {
+    if (!guard(key)) return;
     setState((prev) => ({ ...prev, [key]: (prev[key] || []).filter((x) => x.id !== id) }));
-  }, []);
+    enqueue(`${key}:${id}`, () => repo.remove(key, id), 50);
+  }, [enqueue, repo, guard]);
 
-  const replaceAll = useCallback((next) => {
-    setState(normalizeState(next));
-  }, []);
+  const replaceAll = useCallback(async (next) => {
+    if (!guard('data')) return;
+    const normalized = normalizeState(next);
+    setState(normalized);
+    if (isRemote) {
+      setSync((s) => ({ ...s, status: 'saving' }));
+      try {
+        await repo.replaceAll(normalized);
+        setSync((s) => ({ ...s, status: 'saved', error: null }));
+      } catch (err) {
+        toast(`No se ha podido guardar la importación: ${describeError(err)}`, 'error');
+        setSync((s) => ({ ...s, status: 'error', error: describeError(err) }));
+        reloadFromServer();
+      }
+    }
+  }, [guard, isRemote, repo, toast, reloadFromServer]);
 
   const resetData = useCallback(async ({ keepCompany = false } = {}) => {
-    await dbClear();
-    setState((prev) => ({
-      ...defaultState(),
-      company: keepCompany ? prev.company : defaultState().company,
-      meta: { createdAt: new Date().toISOString(), savedAt: null },
-    }));
+    if (!guard('data')) return;
+    const company = keepCompany ? stateRef.current.company : defaultState().company;
     try {
-      localStorage.removeItem('importauto_completed_steps');
-    } catch {
-      /* noop */
+      await repo.clear({ keepCompany });
+    } catch (err) {
+      toast(`No se ha podido borrar: ${describeError(err)}`, 'error');
+      return;
     }
-  }, []);
+    setState({ ...defaultState(), company, meta: { createdAt: new Date().toISOString(), savedAt: null } });
+    try { localStorage.removeItem('importauto_completed_steps'); } catch { /* noop */ }
+  }, [guard, repo, toast]);
 
-  const loadDemo = useCallback(() => {
-    replaceAll(demoState());
-  }, [replaceAll]);
+  const loadDemo = useCallback(() => replaceAll(demoState()), [replaceAll]);
+
+  /** Importa a la nube los datos que este navegador guardaba en local. */
+  const importLocalBackup = useCallback(async () => {
+    if (!localBackup) return;
+    await replaceAll(localBackup);
+    setLocalBackup(null);
+    toast('Datos de este navegador subidos a la nube');
+  }, [localBackup, replaceAll, toast]);
+
+  const dismissLocalBackup = useCallback(() => setLocalBackup(null), []);
 
   /** Siguiente número de factura disponible. */
   const nextInvoiceNumber = useCallback(() => {
@@ -306,6 +454,21 @@ export function StoreProvider({ children }) {
     return normalized;
   }, [upsert]);
 
+  const deleteVehicle = useCallback((id) => {
+    remove('vehicles', id);
+    repo.deletePhotos(id).catch((err) => console.error('[store] fotos:', err));
+  }, [remove, repo]);
+
+  const putPhotos = useCallback(async (vehicleId, list) => {
+    if (!guard('photos')) return;
+    try {
+      await repo.putPhotos(vehicleId, list);
+    } catch (err) {
+      toast(`No se han guardado las fotos: ${describeError(err)}`, 'error');
+      throw err;
+    }
+  }, [repo, guard, toast]);
+
   const tariffs = useMemo(() => ({ ...DEFAULT_TARIFFS, ...(state.company.tariffs || {}) }), [state.company.tariffs]);
 
   const value = useMemo(
@@ -313,6 +476,10 @@ export function StoreProvider({ children }) {
       state,
       setState,
       ready,
+      mode: repo.mode,
+      role,
+      can: (collection) => canWrite(role, collection),
+      sync,
       tariffs,
       toast,
       log,
@@ -323,18 +490,19 @@ export function StoreProvider({ children }) {
       replaceAll,
       loadDemo,
       resetData,
+      reloadFromServer,
       saveVehicle,
       issueInvoice,
       nextInvoiceNumber,
-      deleteVehicle: (id) => {
-        remove('vehicles', id);
-        deletePhotos(id);
-      },
-      getPhotos,
+      deleteVehicle,
+      getPhotos: repo.getPhotos,
       putPhotos,
+      localBackup,
+      importLocalBackup,
+      dismissLocalBackup,
       toasts,
     }),
-    [state, ready, tariffs, toast, log, setCompany, upsert, remove, updateCollection, replaceAll, loadDemo, resetData, saveVehicle, issueInvoice, nextInvoiceNumber, toasts],
+    [state, ready, repo, role, sync, tariffs, toast, log, setCompany, upsert, remove, updateCollection, replaceAll, loadDemo, resetData, reloadFromServer, saveVehicle, issueInvoice, nextInvoiceNumber, deleteVehicle, putPhotos, localBackup, importLocalBackup, dismissLocalBackup, toasts],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

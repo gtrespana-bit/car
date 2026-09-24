@@ -34,7 +34,8 @@ export function PhotoStrip({ vehicleId, className = '' }) {
 
 /**
  * Gestor de fotos de un vehículo: sube, ordena, marca la principal y borra.
- * Las imágenes se redimensionan a 1.600 px y se guardan en IndexedDB.
+ * Las imágenes se redimensionan a 1.600 px y se guardan en Supabase Storage
+ * (o en IndexedDB en modo local).
  */
 export function PhotoManager({ vehicleId, maxPhotos = 20 }) {
   const { getPhotos, putPhotos, toast } = useStore();
@@ -57,7 +58,13 @@ export function PhotoManager({ vehicleId, maxPhotos = 20 }) {
 
   const persist = async (next) => {
     setPhotos(next);
-    await putPhotos(vehicleId, next);
+    try {
+      await putPhotos(vehicleId, next);
+    } catch {
+      /* el store ya ha avisado; recargamos la verdad del servidor */
+    }
+    // En la nube, las fotos recién subidas vuelven con su ruta y URL firmada
+    await reload();
   };
 
   const add = async (files) => {

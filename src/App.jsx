@@ -2,10 +2,13 @@ import React, { useMemo, useState, useEffect } from 'react';
 import {
   Gauge, Car, Database, Calculator, Users, Wallet, FileWarning, FileCheck2, BarChart3,
   BookOpen, Settings as SettingsIcon, Menu, X, Building2, HardDrive, MapPin, ShieldCheck,
-  ReceiptText,
+  ReceiptText, Cloud, CloudOff, LogOut, UserRound, Upload,
 } from 'lucide-react';
 import { StoreProvider, useStore } from './lib/store.jsx';
-import { Toasts, Badge, cx } from './components/ui.jsx';
+import { AuthProvider, useOptionalAuth } from './lib/auth.jsx';
+import AuthGate from './components/AuthGate.jsx';
+import { roleLabel } from './lib/roles.js';
+import { Toasts, Badge, Button, cx } from './components/ui.jsx';
 import { eur0 } from './lib/format.js';
 import { fleetSummary, isSold } from './domain/finance.js';
 
@@ -49,8 +52,18 @@ const LEGAL_FORM = {
   sl: 'Sociedad Limitada',
 };
 
+function SyncBadge({ ready, mode, sync }) {
+  if (!ready) return <Badge tone="amber">Cargando</Badge>;
+  if (mode === 'local') return <Badge tone="emerald">Guardado</Badge>;
+  if (sync.status === 'error') return <Badge tone="rose">Error</Badge>;
+  if (sync.status === 'saving' || sync.pending) return <Badge tone="amber">Guardando…</Badge>;
+  return <Badge tone="emerald">Sincronizado</Badge>;
+}
+
 function Shell() {
-  const { state, ready, tariffs, toasts } = useStore();
+  const { state, ready, tariffs, toasts, mode, role, sync, localBackup, importLocalBackup, dismissLocalBackup } = useStore();
+  const auth = useOptionalAuth();
+  const isCloud = mode === 'supabase';
   const [view, setView] = useState('dashboard');
   const [menu, setMenu] = useState(false);
   const [simSeed, setSimSeed] = useState(null);
@@ -126,9 +139,21 @@ function Shell() {
 
         <div className="px-4 py-3 border-t border-slate-800 space-y-2">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-slate-500 flex items-center gap-1.5"><HardDrive className="w-3.5 h-3.5" />Datos locales</span>
-            <Badge tone={ready ? 'emerald' : 'amber'}>{ready ? 'Guardado' : 'Cargando'}</Badge>
+            <span className="text-slate-500 flex items-center gap-1.5" title={sync.error || ''}>
+              {isCloud ? (sync.status === 'error' ? <CloudOff className="w-3.5 h-3.5 text-rose-400" /> : <Cloud className="w-3.5 h-3.5" />) : <HardDrive className="w-3.5 h-3.5" />}
+              {isCloud ? 'Nube' : 'Datos locales'}
+            </span>
+            <SyncBadge ready={ready} mode={mode} sync={sync} />
           </div>
+          {isCloud && auth?.user && (
+            <div className="flex items-center justify-between text-[11px] gap-2">
+              <span className="text-slate-500 flex items-center gap-1.5 min-w-0"><UserRound className="w-3.5 h-3.5 shrink-0" /><span className="truncate" title={auth.user.email}>{auth.user.email}</span></span>
+              <span className="flex items-center gap-1.5 shrink-0">
+                <Badge tone="slate">{roleLabel(role)}</Badge>
+                <button onClick={auth.signOut} title="Cerrar sesión" className="text-slate-500 hover:text-white"><LogOut className="w-3.5 h-3.5" /></button>
+              </span>
+            </div>
+          )}
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-slate-500 flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" />Régimen</span>
             <span className="text-slate-300">{LEGAL_FORM[state.company.legalForm]} · {String(state.company.vatRegime).toUpperCase()}</span>
@@ -151,6 +176,20 @@ function Shell() {
         </header>
 
         <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
+          {localBackup && (
+            <div className="mb-5 rounded-xl border border-amber-500/40 bg-amber-500/5 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 print:hidden">
+              <div className="flex-1 text-xs text-amber-100">
+                <p className="font-bold">Hay datos guardados en este navegador de la versión anterior</p>
+                <p className="text-amber-200/80">
+                  {localBackup.vehicles.length} vehículos, {localBackup.contacts.length} contactos, {localBackup.invoices.length} facturas y {localBackup.expenses.length} gastos. Tu empresa en la nube está vacía: ¿los subimos? (Las fotos no se migran; vuelve a subirlas desde cada ficha.)
+                </p>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Button icon={Upload} onClick={importLocalBackup}>Subir a la nube</Button>
+                <Button variant="ghost" onClick={dismissLocalBackup}>Ahora no</Button>
+              </div>
+            </div>
+          )}
           {view === 'dashboard' && <DashboardView go={go} editVehicle={editVehicle} />}
           {view === 'fleet' && <FleetView autoOpenId={openVehicleId} onAutoOpened={() => setOpenVehicleId(null)} />}
           {view === 'catalog' && <CatalogView onSimulate={openSimulator} />}
@@ -169,7 +208,7 @@ function Shell() {
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-[11px] text-slate-500">
             <p>
               <span className="text-slate-300 font-semibold">{state.company.name || 'Coruña AutoImport'}</span> — gestión de importación y venta de vehículos.
-              Datos guardados únicamente en este navegador.
+              {isCloud ? 'Datos alojados en la nube (Supabase, UE) con acceso por usuario y rol.' : 'Datos guardados únicamente en este navegador.'}
             </p>
             <p className="flex flex-wrap items-center gap-2">
               <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5 text-amber-500" />A Coruña · Arteixo · Espíritu Santo</span>
@@ -186,8 +225,12 @@ function Shell() {
 
 export default function App() {
   return (
-    <StoreProvider>
-      <Shell />
-    </StoreProvider>
+    <AuthProvider>
+      <AuthGate>
+        <StoreProvider>
+          <Shell />
+        </StoreProvider>
+      </AuthGate>
+    </AuthProvider>
   );
 }
