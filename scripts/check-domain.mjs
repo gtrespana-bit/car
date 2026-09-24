@@ -17,6 +17,7 @@ import {
 import { DEFAULT_TARIFFS, IVTM_CORUNA_TURISMOS } from '../src/domain/rates.js';
 import { buildTaxCalendar, applyFilingStatus, documentProgress, buildAlerts } from '../src/domain/compliance.js';
 import { financeOffer } from '../src/domain/finance.js';
+import { catalogEstimate } from '../src/domain/catalogEstimate.js';
 import { invoiceNumber, invoiceLines, buildAd, followUpMessage, whatsappLink, emailLink } from '../src/lib/templates.js';
 import { VEHICLE_DB, CURATED_DB, RELIABILITY_META } from '../src/data/vehicleDatabase.js';
 import { GENERATED_DB } from '../src/data/catalog/index.js';
@@ -433,6 +434,15 @@ check('Catálogo: la potencia fiscal cuadra con la cilindrada', () => {
 
 // --- Ejecución --------------------------------------------------------------
 let failed = 0;
+check('Catálogo: la ganancia usa precios medios y descuenta gastos e IVA', () => {
+  const e = catalogEstimate({ dePrice: [12500, 16000], esPrice: [17500, 20500], co2: 118, newPrice: 31500, years: [2017, 2020], fuel: 'Diésel' });
+  assert.equal(e.buy, 14250);
+  assert.equal(e.sell, 19000);
+  assert.equal(e.profit, e.sell - e.buy - e.expenses - e.vat);
+  assert.equal(e.expenses, e.lines.reduce((a, l) => a + l.amount, 0));
+  assert.ok(e.profit < e.sell - e.buy);
+});
+
 for (const [name, fn] of checks) {
   try {
     fn();

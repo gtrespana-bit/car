@@ -3,12 +3,18 @@ import { Database, Download, Calculator, Plus, X, ShieldCheck, AlertTriangle, Tr
 import { Card, Button, Field, Input, Select, Stat, SectionTitle, Badge, Table, Row, SearchInput, EmptyState, Alert, KeyValueGrid, Modal, cx } from '../components/ui.jsx';
 import { useStore } from '../lib/store.jsx';
 import { eur, eur0, numEs, todayISO, download, toCsv } from '../lib/format.js';
+import { catalogEstimate, profitLevel } from '../domain/catalogEstimate.js';
 import { VEHICLE_DB, RELIABILITY_META, CURATED_COUNT, searchVehicles } from '../data/vehicleDatabase.js';
 
 const REL_ORDER = { gold: 0, ok: 1, warn: 2, banned: 3 };
 
 export default function CatalogView({ onSimulate }) {
-  const { saveVehicle, toast } = useStore();
+  const { saveVehicle, toast, tariffs } = useStore();
+  const est = useMemo(() => {
+    const m = new Map();
+    return (v) => { if (!m.has(v.id)) m.set(v.id, catalogEstimate(v, tariffs)); return m.get(v.id); };
+  }, [tariffs]);
+  const profitOf = (v) => est(v)?.profit ?? -1e9;
   const [q, setQ] = useState('');
   const [brand, setBrand] = useState('');
   const [segment, setSegment] = useState('');
@@ -40,10 +46,10 @@ export default function CatalogView({ onSimulate }) {
     if (sort === 'precio_asc') sorted.sort((a, b) => (a.dePrice?.[0] ?? 1e9) - (b.dePrice?.[0] ?? 1e9));
     else if (sort === 'precio_desc') sorted.sort((a, b) => (b.dePrice?.[1] ?? 0) - (a.dePrice?.[1] ?? 0));
     else if (sort === 'rotacion') sorted.sort((a, b) => (a.rotationDays ?? 999) - (b.rotationDays ?? 999));
-    else if (sort === 'margen') sorted.sort((a, b) => ((b.esPrice?.[1] ?? 0) - (b.dePrice?.[0] ?? 0)) - ((a.esPrice?.[1] ?? 0) - (a.dePrice?.[0] ?? 0)));
+    else if (sort === 'margen') sorted.sort((a, b) => profitOf(b) - profitOf(a));
     else sorted.sort((a, b) => (REL_ORDER[a.reliability] ?? 9) - (REL_ORDER[b.reliability] ?? 9) || (a.brand > b.brand ? 1 : -1));
     return sorted;
-  }, [q, brand, segment, fuel, rel, onlyWinners, maxPrice, sort]);
+  }, [q, brand, segment, fuel, rel, onlyWinners, maxPrice, sort, est]);
 
   const pageRows = results.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE);
   const totalPages = Math.max(1, Math.ceil(results.length / PER_PAGE));
@@ -52,11 +58,11 @@ export default function CatalogView({ onSimulate }) {
     const gold = results.filter((v) => v.reliability === 'gold').length;
     const banned = results.filter((v) => v.reliability === 'banned').length;
     const avgDe = results.length ? results.reduce((a, v) => a + (v.dePrice?.[0] ?? 0), 0) / results.length : 0;
-    const avgGap = results.length
-      ? results.reduce((a, v) => a + ((v.esPrice?.[1] ?? 0) - (v.dePrice?.[0] ?? 0)), 0) / results.length
-      : 0;
-    return { gold, banned, avgDe, avgGap, count: results.length };
-  }, [results]);
+    const withData = results.map((v) => est(v)).filter(Boolean);
+    const avgProfit = withData.length ? withData.reduce((a, e) => a + e.profit, 0) / withData.length : 0;
+    const good = withData.filter((e) => e.profit >= 2000).length;
+    return { gold, banned, avgDe, avgProfit, good, count: results.length };
+  }, [results, est]);
 
   const exportCsv = () => {
     download(`catalogo_${todayISO()}.csv`, toCsv(results, [
@@ -109,9 +115,17 @@ export default function CatalogView({ onSimulate }) {
     { key: 'de', label: 'Compra en Alemania', align: 'right', render: (v) => <span className="text-xs tabular-nums">{v.dePrice ? `${eur0(v.dePrice[0])} – ${eur0(v.dePrice[1])}` : '—'}</span> },
     { key: 'es', label: 'Venta en Galicia', align: 'right', render: (v) => <span className="text-xs tabular-nums">{v.esPrice ? `${eur0(v.esPrice[0])} – ${eur0(v.esPrice[1])}` : '—'}</span> },
     {
-      key: 'gap', label: 'Margen est. (ES−DE)', align: 'right', render: (v) => {
-        const gap = (v.esPrice?.[1] ?? 0) - (v.dePrice?.[0] ?? 0);
-        return <span title="Diferencia de precio entre venta en Galicia y compra en Alemania" className={cx('tabular-nums text-xs font-semibold', gap > 4000 ? 'text-emerald-400' : gap > 2000 ? 'text-amber-300' : 'text-slate-400')}>{gap > 0 ? eur0(gap) : '—'}</span>;
+      key: 'profit', label: 'Ganarías aprox.', align: 'right', render: (v) => {
+        const e = est(v);
+        if (!e) return <span className="text-xs text-slate-500">—</span>;
+        const lvl = profitLevel(e.profit);
+        const color = { emerald: 'text-emerald-400', amber: 'text-amber-300', rose: 'text-rose-400' }[lvl.tone];
+        return (
+          <div title={`Venta media ${eur0(e.sell)} − compra media ${eur0(e.buy)} − gastos ${eur0(e.expenses)} − IVA ${eur0(e.vat)}`}>
+            <p className={cx('tabular-nums text-sm font-bold', color)}>{eur0(e.profit)}</p>
+            <p className="text-[10px] text-slate-500">{lvl.label}</p>
+          </div>
+        );
       },
     },
     { key: 'rot', label: 'Rotación', align: 'right', render: (v) => <span className="text-xs text-slate-400">{v.rotationDays ? `${v.rotationDays} d` : '—'}</span> },
@@ -143,7 +157,7 @@ export default function CatalogView({ onSimulate }) {
         <Stat label="Motores roca" value={stats.gold} tone="emerald" icon={ShieldCheck} />
         <Stat label="Motores prohibidos" value={stats.banned} tone="rose" icon={AlertTriangle} />
         <Stat label="Compra media (Alemania)" value={eur0(stats.avgDe)} tone="sky" />
-        <Stat label="Margen medio ES−DE" value={eur0(stats.avgGap)} tone="amber" icon={TrendingUp} hint="Diferencial de precio bruto antes de costes e impuestos" />
+        <Stat label="Ganancia media por coche" value={eur0(stats.avgProfit)} tone="amber" icon={TrendingUp} hint={`${stats.good} modelos dejan más de 2.000 € limpios`} />
       </div>
 
       <Card className="p-3">
@@ -160,7 +174,7 @@ export default function CatalogView({ onSimulate }) {
               { value: 'relevancia', label: 'Orden: fiabilidad' },
               { value: 'precio_asc', label: 'Orden: precio ↑' },
               { value: 'precio_desc', label: 'Orden: precio ↓' },
-              { value: 'margen', label: 'Orden: mayor margen bruto (ES−DE)' },
+              { value: 'margen', label: 'Orden: más ganancia' },
               { value: 'rotacion', label: 'Orden: venta más rápida' },
             ]}
           />
@@ -237,9 +251,9 @@ export default function CatalogView({ onSimulate }) {
                 <p className="text-[11px] text-slate-500 mt-1">Rotación prevista: {detail.rotationDays ? `${detail.rotationDays} días` : '—'}</p>
               </Card>
               <Card className="p-3">
-                <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Margen bruto estimado</p>
-                <p className="text-xl font-extrabold text-emerald-400 mt-1">{eur0((detail.esPrice?.[1] ?? 0) - (detail.dePrice?.[0] ?? 0))}</p>
-                <p className="text-[11px] text-slate-500 mt-1">Diferencial de precio ES−DE antes de gastos e impuestos</p>
+                <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Ganarías aprox.</p>
+                <p className={cx('text-xl font-extrabold mt-1', { emerald: 'text-emerald-400', amber: 'text-amber-300', rose: 'text-rose-400', slate: 'text-slate-300' }[profitLevel(est(detail)?.profit).tone])}>{est(detail) ? eur0(est(detail).profit) : '—'}</p>
+                <p className="text-[11px] text-slate-500 mt-1">Limpio, con todos los gastos e IVA descontados</p>
               </Card>
               <Card className="p-3">
                 <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Veredicto</p>
@@ -247,6 +261,21 @@ export default function CatalogView({ onSimulate }) {
                 <p className="text-[11px] text-slate-500 mt-1">{detail.winner ? 'Alta demanda y motor fiable' : detail.reliability === 'banned' ? 'Motor problemático: no importar' : 'Analiza caso por caso'}</p>
               </Card>
             </div>
+            {est(detail) && (
+              <Card className="p-3">
+                <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-2">Cuentas de un coche típico ({est(detail).year})</p>
+                <div className="text-sm space-y-1 tabular-nums">
+                  <div className="flex justify-between"><span>Lo vendes en Galicia por</span><span className="font-semibold text-white">{eur0(est(detail).sell)}</span></div>
+                  <div className="flex justify-between text-slate-400"><span>− Lo compras en Alemania por</span><span>{eur0(est(detail).buy)}</span></div>
+                  {est(detail).lines.map((l) => (
+                    <div key={l.label} className="flex justify-between text-slate-400"><span>− {l.label}</span><span>{eur0(l.amount)}</span></div>
+                  ))}
+                  <div className="flex justify-between text-slate-400"><span>− IVA de la venta (REBU, sobre tu margen)</span><span>{eur0(est(detail).vat)}</span></div>
+                  <div className="flex justify-between border-t border-slate-700 pt-1 font-bold"><span>= Te queda limpio</span><span>{eur0(est(detail).profit)}</span></div>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-2">Precios medios de mercado (no el más barato ni el más caro). Los gastos salen de Ajustes → Tarifas.</p>
+              </Card>
+            )}
             <Alert tone="info">
               Para cerrar la operación, abre el <b>simulador</b>: calculará el IEDMT exacto según el CO₂, el ITP o el IVA según quién te venda, las tasas de la DGT, el IVTM de A Coruña y el precio mínimo al que debes vender para ganar lo que quieres.
             </Alert>
