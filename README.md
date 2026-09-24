@@ -25,21 +25,59 @@ El proyecto se divide en dos fases bien diferenciadas para minimizar riesgos, va
 
 ---
 
-## 💻 Aplicación de Gestión Integrada
+## 💻 ERP de gestión (React 19 + Vite + Tailwind v4)
 
-El repositorio incluye una aplicación web completa desarrollada en **React 19 + Vite + Tailwind CSS v4** diseñada para gestionar todo el ciclo de vida del negocio:
+Aplicación de back-office pensada para **usarla a diario**, no como calculadora puntual.
+Los datos se guardan en el navegador (IndexedDB, con copia en localStorage y respaldo JSON
+exportable); no hay servidor ni se envía nada a ningún sitio.
 
-- **📊 Dashboard de Control**: KPIs de capital en circulación, margen bruto y neto, ROI medio y días medios en stock.
-- **🧮 Simulador de Costes e Impuestos**: Desglose exacto de impuestos españoles (Modelo 576 según tramos CO2, ITP 620 en Galicia si aplica, IVTM A Coruña, DGT, ITV, transporte, reacondicionamiento y cálculo de IRPF). Presets cargados para Cupra Formentor, Golf 7.5, Tucson N-Line, Sportage GT-Line, RAV4 Hybrid, C-HR, Caddy 4, Mercedes A 200d AMG y BMW X1.
-  - **🔎 Buscador con autocompletado** (`src/data/vehicleDatabase.js`): +100 motorizaciones (VAG, BMW, Mercedes, Toyota, Hyundai/Kia, Mazda, Renault/Dacia/Nissan, Stellantis, Ford, JLR, Jeep). Al seleccionar se rellenan automáticamente motor, cilindrada, CO₂ WLTP, CVF, etiqueta DGT, precio medio de tablas Hacienda y horquillas de precio Alemania/Galicia. Los campos Marca / Modelo / Versión también autocompletan mediante `datalist`.
-  - **🚨 Alerta automática de motor problemático**: cada ficha lleva su estado de fiabilidad (`gold` / `ok` / `warn` / `banned`). Si eliges un PureTech, 1.5 BlueHDi, 1.2 TCe, N47, Ingenium, BiTDI, Powershift, CVT X-Tronic… salta el banner rojo de **MODELO PROHIBIDO**. Si escribes el coche a mano, `src/utils/engineGuardian.js` aplica heurísticas por texto y año.
-  - **📚 Tablas oficiales de referencia** (`src/data/taxTables.js`): tramos del Impuesto de Matriculación (Mod. 576), tabla de depreciación y **valor venal de Hacienda** (Orden HFP de precios medios) con simulador, IVTM del Concello de A Coruña por CVF, tasas DGT / ITV / ficha reducida / COC / gestoría con botón «Aplicar» y calculadora oficial de **caballos fiscales**.
-  - **⚖️ Base imponible del 576 elegible**: liquidar por *tablas Hacienda* (valor venal minorado de IVA + IEDMT, no comprobable) o por *precio de factura*, con aviso cuando el precio pagado queda por debajo de tablas. El ITP se calcula sobre el mayor entre precio y valor venal.
-- **🛡️ Guía de Fiabilidad y Matriz de Modelos**: Buscador y clasificador exhaustivo de **Modelos Ganadores vs Modelos Prohibidos** por segmentos (Compactos, C-SUVs, Furgonetas Combi/Camper, Todoterrenos 4x4 rurales, Familiares 7 plazas y Urbanos ECO).
-- **🚗 Gestor de Flota / Pipeline**: Seguimiento paso a paso del estado de cada vehículo (Prospección, Comprado, En tránsito, En trámites en Coruña, En venta, Vendido).
-- **📋 Guía Operativa Paso a Paso**: Instrucciones detalladas de los trámites específicos en A Coruña (ITV Espírito Santo/Sabón, Delegación de Hacienda de A Coruña, Atriga, Jefatura de Tráfico DGT en Calle Médico Rodríguez).
-- **📄 Generador de Contratos y Documentos**: Generación lista para imprimir de Contratos de Compraventa entre particulares conforme al Código Civil y contratos de señal/reserva con cláusulas anti-vicios ocultos.
-- **🏢 Simulador de Fase 2**: Calculadora REBU vs Régimen General, comparativa de costes fijos de nave en polígonos de A Coruña y viabilidad económica.
+| Módulo | Qué hace |
+| --- | --- |
+| **Cuadro de mando** | Caja, capital en stock, beneficio neto, impuestos pendientes, avisos operativos y cobros/pagos a 90 días |
+| **Flota y stock** | Cada vehículo con su coste real, estado en el flujo (10 pasos), documentación y margen neto. Vista tabla y tablero |
+| **Catálogo** | **1.104 variantes de 37 marcas** (101 curadas + 1.003 generadas) con fiabilidad de motor, precio estimado DE/ES y rotación |
+| **Simulador de importación** | Coste total desglosado, impuestos exactos, precio sugerido, punto de equilibrio y análisis de sensibilidad |
+| **Clientes y ventas** | CRM con fases, embudo, presupuestos y tareas con vencimiento |
+| **Contabilidad** | Cobros y pagos del vehículo y de estructura, resultados por meses, tesorería y rentabilidad por marca/modelo/segmento |
+| **Impuestos** | Calendario fiscal generado con tus datos (576, 06, 620, 303, 349, 390, 130, 202, 200, 100, IVTM, RETA) con control de presentación |
+| **Facturación** | Emisión de facturas con numeración correlativa, desglose según régimen (REBU/general/particular) y mención legal obligatoria, imprimibles en PDF |
+| **Anuncios** | Generador de textos listos para Wallapop/Milanuncios/Coches.net con los datos reales de la ficha y control del límite de caracteres |
+| **Documentación** | 15 documentos por vehículo (8 obligatorios) y ficha de expediente imprimible |
+| **Fotos** | Galería por vehículo guardada en IndexedDB (redimensionada a 1.600 px), con foto principal y orden, visible en la flota y usable en el anuncio |
+| **Informes** | Cuenta de resultados, valoración de stock, carga fiscal y evolución mensual. Imprimible en PDF |
+| **Ajustes** | Empresa, régimen fiscal, tarifas editables del ejercicio, respaldo de datos y fuentes de cada cifra |
+
+### Ventas y movilidad
+
+- **Financiación al comprador** en la ficha y en el CRM (cuota con sistema francés, entrada,
+  plazo y comisión de intermediación, que se registra como ingreso propio).
+- **Botones de WhatsApp y email** en cada contacto con mensaje de seguimiento ya escrito
+  (seguimiento, cita, oferta, financiación, entrega, postventa).
+- **PWA instalable y offline**: manifest, service worker e iconos propios generados en
+  `scripts/make-icons.mjs`; la app se instala en el móvil y funciona sin cobertura.
+
+### Cálculo fiscal exacto, no orientativo
+
+El motor (`src/domain/`) usa las tarifas verificadas de 2026: tasa 1.1 de la DGT 99,77 €,
+ITV de Galicia 43,76 €/52,30 € (IVA incluido), ficha técnica 80,29 €, IEDMT por tramos de CO₂
+(0 / 4,75 / 9,75 / 14,75 %), ITP de Galicia 8 % (Mod. 620, ATRIGA), IVTM de A Coruña según la
+Ordenanza Fiscal nº 52 (19,50 / 62,62 / 132,19 / 179,20 / 224,00 € con bonificación del 60 %
+para bajas emisiones), IVA 21 % y REBU 21 % sobre el margen, IRPF base del ahorro 19–30 % e
+IS 2026 (25 % / 23 % ERD / 19 %+21 % microempresa).
+
+Las cifras que **no** se han podido verificar contra una fuente oficial (cuotas exactas de
+autónomos por tramo, escala autonómica gallega del IRPF, bonificación del ITP para
+eléctricos) están marcadas como estimación dentro de la propia aplicación y listadas en
+*Ajustes → Fuentes y verificación*.
+
+### Garantía técnica
+
+```bash
+npm run check          # 65 aserciones sobre el motor fiscal, económico, facturación y plantillas
+npm run catalog:stats  # integridad de la base de vehículos (ids, campos, horquillas)
+npm run smoke          # monta las 34 vistas con 3 escenarios de datos
+npm run build          # compilación de producción
+```
 
 ---
 
@@ -71,7 +109,7 @@ vercel --prod
 
 ### Configuración incluida en el repositorio:
 - `vercel.json`: Incluye las reglas de reescritura (`rewrites`) para Single-Page Applications (SPA), garantizando que cualquier recarga de página o enlace directo funcione sin errores 404.
-- `package.json`: Scripts estándar `dev`, `build` y `preview`.
+- `package.json`: Scripts `dev`, `build`, `preview`, `check`, `catalog:stats` y `smoke`.
 - `dist`: Compilación limpia verificada sin errores de TypeScript ni dependencias faltantes.
 
 ---
@@ -90,6 +128,11 @@ npm run build
 
 # 4. Previsualizar la compilación de producción
 npm run preview
+
+# 5. Comprobaciones (motor fiscal, catálogo y render de todas las vistas)
+npm run check
+npm run catalog:stats
+npm run smoke
 ```
 
 ---
@@ -105,3 +148,4 @@ En el directorio `/docs` dispones de la biblioteca estratégica completa:
 5. [`docs/05_ROADMAP_FASE_2_LOCAL_Y_PROFESIONALIZACION.md`](docs/05_ROADMAP_FASE_2_LOCAL_Y_PROFESIONALIZACION.md): Plan de negocio para dar el salto a local comercial en polígonos de A Coruña.
 6. [`docs/06_GUIA_MOTORES_FIABILIDAD_Y_ROTACION.md`](docs/06_GUIA_MOTORES_FIABILIDAD_Y_ROTACION.md): Guía de motores roca vs lista negra (PureTech, BlueHDi, 1.2 TCe, EcoBoost pre-2020, N47, Ingenium).
 7. [`docs/07_MATRIZ_MODELOS_GANADORES_VS_PROHIBIDOS.md`](docs/07_MATRIZ_MODELOS_GANADORES_VS_PROHIBIDOS.md): Matriz maestra por segmentos (Cupra Formentor, C-HR, Tucson, RAV4, Caddy, T6 150 CV, Duster 4x4, Mercedes 200d OM654, BMW Serie 1 F20 LCI, etc.).
+8. [`docs/08_MANUAL_USO_ERP.md`](docs/08_MANUAL_USO_ERP.md): **Manual de uso del ERP**: cómo se opera cada módulo en el día a día, calendario de modelos tributarios, cifras verificadas de 2026 y las que hay que comprobar antes de declarar.

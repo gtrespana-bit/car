@@ -1,0 +1,107 @@
+// ============================================================================
+//  PRUEBA DE HUMO DE RENDER — monta cada vista con datos reales y comprueba
+//  que ninguna revienta. Se ejecuta en Node con `npm run smoke` (el runner en
+//  scripts/smoke.mjs levanta un servidor Vite para poder importar JSX).
+// ============================================================================
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { StoreProvider } from '../src/lib/store.jsx';
+import App from '../src/App.jsx';
+import DashboardView from '../src/views/DashboardView.jsx';
+import FleetView from '../src/views/FleetView.jsx';
+import CatalogView from '../src/views/CatalogView.jsx';
+import ImportSimulatorView from '../src/views/ImportSimulatorView.jsx';
+import CrmView from '../src/views/CrmView.jsx';
+import AccountingView from '../src/views/AccountingView.jsx';
+import TaxView from '../src/views/TaxView.jsx';
+import DocumentsView from '../src/views/DocumentsView.jsx';
+import ReportsView from '../src/views/ReportsView.jsx';
+import GuidesView from '../src/views/GuidesView.jsx';
+import SettingsView from '../src/views/SettingsView.jsx';
+import InvoicesView from '../src/views/InvoicesView.jsx';
+import AdModal from '../src/components/AdModal.jsx';
+import { PhotoManager, PhotoStrip } from '../src/components/Photos.jsx';
+
+const LS_KEY = 'coruna_autoimport_erp_state_v1';
+
+import { demoState } from '../src/data/demoState.js';
+
+export const seedState = demoState;
+
+const CASES = [
+  ['App (cuadro de mando)', () => <App />],
+  ['Cuadro de mando', () => <DashboardView go={() => {}} editVehicle={() => {}} />],
+  ['Flota', () => <FleetView />],
+  ['Catálogo', () => <CatalogView onSimulate={() => {}} />],
+  ['Simulador · simulador', () => <ImportSimulatorView />],
+  ['Simulador · desglose', () => <ImportSimulatorView initialTab="desglose" />],
+  ['Simulador · escenarios', () => <ImportSimulatorView initialTab="escenarios" />],
+  ['Simulador · precargado desde catálogo', () => <ImportSimulatorView seed={{ brand: 'Toyota', model: 'RAV4 V', version: '2.5 Hybrid', years: [2019, 2024], cc: 2487, co2: 128, fuel: 'Híbrido', newPrice: 42900, dePrice: [22000, 28000] }} />],
+  ['Clientes · contactos', () => <CrmView vehicles={[]} />],
+  ['Clientes · embudo', () => <CrmView vehicles={[]} initialTab="pipeline" />],
+  ['Clientes · tareas', () => <CrmView vehicles={[]} initialTab="tareas" />],
+  ['Contabilidad · movimientos', () => <AccountingView />],
+  ['Contabilidad · gastos', () => <AccountingView initialTab="gastos" />],
+  ['Contabilidad · resultados', () => <AccountingView initialTab="resultados" />],
+  ['Contabilidad · tesorería', () => <AccountingView initialTab="tesoreria" />],
+  ['Contabilidad · rentabilidad', () => <AccountingView initialTab="rentabilidad" />],
+  ['Impuestos · calendario', () => <TaxView />],
+  ['Impuestos · IVA', () => <TaxView initialTab="iva" />],
+  ['Impuestos · IRPF', () => <TaxView initialTab="renta" />],
+  ['Impuestos · importación', () => <TaxView initialTab="importacion" />],
+  ['Documentación', () => <DocumentsView />],
+  ['Informes', () => <ReportsView />],
+  ['Guías · importación', () => <GuidesView />],
+  ['Guías · fiabilidad', () => <GuidesView initialTab="fiabilidad" />],
+  ['Guías · contratos', () => <GuidesView />],
+  ['Guías · plan de crecimiento', () => <GuidesView initialTab="fase2" />],
+  ['Ajustes · empresa', () => <SettingsView />],
+  ['Ajustes · fiscal', () => <SettingsView initialTab="fiscal" />],
+  ['Ajustes · tarifas', () => <SettingsView initialTab="tarifas" />],
+  ['Ajustes · datos', () => <SettingsView initialTab="datos" />],
+  ['Facturación', () => <InvoicesView />],
+  ['Anuncio (modal abierto)', () => <AdModal open vehicle={demoState().vehicles[0]} onClose={() => {}} />],
+  ['Gestor de fotos', () => <PhotoManager vehicleId="veh-golf" />],
+  ['Miniatura de foto', () => <PhotoStrip vehicleId="veh-golf" />],
+];
+
+export async function run() {
+  const store = new Map();
+  globalThis.localStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: (k) => store.delete(k),
+  };
+  globalThis.window = globalThis;
+  globalThis.document = { createElement: () => ({ style: {}, click() {}, setAttribute() {} }), body: { appendChild() {}, removeChild() {}, style: {} }, addEventListener() {}, removeEventListener() {} };
+
+  const errors = [];
+  const origError = console.error;
+  const origWarn = console.warn;
+  console.error = (...a) => { errors.push(String(a[0] && a[0].message ? a[0].message : a.join(' '))); origError(...a); };
+  console.warn = () => {};
+
+  const scenarios = [
+    { label: 'con datos', state: seedState() },
+    { label: 'vacío', state: { schema: 2 } },
+    { label: 'sociedad en régimen general', state: { ...seedState(), company: { ...seedState().company, legalForm: 'sl', vatRegime: 'general', turnover: 400000 }, filings: [] } },
+  ];
+
+  const results = [];
+  for (const sc of scenarios) {
+    store.set(LS_KEY, JSON.stringify(sc.state));
+    for (const [name, render] of CASES) {
+      try {
+        const html = renderToStaticMarkup(<StoreProvider>{render()}</StoreProvider>);
+        if (!html || html.length < 200) throw new Error(`markup demasiado corto (${html ? html.length : 0} caracteres)`);
+        results.push({ scenario: sc.label, name, ok: true, size: html.length });
+      } catch (e) {
+        results.push({ scenario: sc.label, name, ok: false, error: e && e.message ? e.message : String(e), stack: e && e.stack });
+      }
+    }
+  }
+
+  console.error = origError;
+  console.warn = origWarn;
+  return { results, errors };
+}
