@@ -10,6 +10,26 @@ import { GENERATED_DB } from '../src/data/catalog/index.js';
 const q = (a, p) => { const s = [...a].sort((x, y) => x - y); const i = (s.length - 1) * p; const l = Math.floor(i); return s[l] + (s[Math.min(l + 1, s.length - 1)] - s[l]) * (i - l); };
 const F = { DE: priceFit('DE'), ES: priceFit('ES') };
 const MIN_DE = 4, MIN_ES = 3;
+// OLS log(precio) ~ 1 + ES + (año−Y) + (km−K)/1000. Devuelve null si no es fiable.
+function groupFit(rows, Y, K) {
+  if (rows.length < 12) return null;
+  const X = rows.map((o) => [1, o.market === 'ES' ? 1 : 0, o.year - Y, (o.km - K) / 1000]);
+  const y = rows.map((o) => Math.log(o.price));
+  const n = 4, A = Array.from({ length: n }, () => Array(n + 1).fill(0));
+  X.forEach((x, r) => { for (let i = 0; i < n; i++) { for (let j = 0; j < n; j++) A[i][j] += x[i] * x[j]; A[i][n] += x[i] * y[r]; } });
+  for (let c = 0; c < n; c++) {
+    let pv = c; for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[pv][c])) pv = r;
+    if (Math.abs(A[pv][c]) < 1e-9) return null;
+    [A[c], A[pv]] = [A[pv], A[c]];
+    for (let r = 0; r < n; r++) if (r !== c) { const f = A[r][c] / A[c][c]; for (let j = c; j <= n; j++) A[r][j] -= f * A[c][j]; }
+  }
+  const b = A.map((row, i) => row[n] / row[i]);
+  const yearCoef = b[2], kmCoef = b[3]; // kmCoef < 0, como en priceModel
+  // Plausible: 3-20 %/año y 0,05-0,6 %/1.000 km
+  if (!(yearCoef > 0.03 && yearCoef < 0.20 && kmCoef < -0.0005 && kmCoef > -0.006)) return null;
+  return { yearCoef, kmCoef };
+}
+
 
 const groups = new Map();
 for (const o of O) {
@@ -29,7 +49,11 @@ for (const [k, m] of groups) {
   const all = [...m.DE, ...m.ES];
   const Y = Math.round(q(all.map((o) => o.year), 0.5));
   const K = Math.round(q(all.map((o) => o.km), 0.5) / 1000) * 1000;
-  const norm = (o, mk) => o.price * Math.exp(F[mk].yearCoef * (Y - o.year) + F[mk].kmCoef * (K - o.km) / 1000);
+  // Coeficientes año/km del PROPIO grupo (DE y ES juntos, con desplazamiento por mercado),
+  // para que añadir anuncios de otros modelos no altere este resultado.
+  const gf = groupFit(all, Y, K);
+  const coef = (mk) => gf || F[mk];
+  const norm = (o, mk) => o.price * Math.exp(coef(mk).yearCoef * (Y - o.year) + coef(mk).kmCoef * (K - o.km) / 1000);
   const de = m.DE.map((o) => norm(o, 'DE')); const es = m.ES.map((o) => norm(o, 'ES'));
   const cvs = all.map(cvOf);
   const cv = Math.round(q(cvs, 0.5));
