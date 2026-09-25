@@ -20,8 +20,10 @@ export function catalogEstimate(v = {}, tariffs = DEFAULT_TARIFFS, refDate = new
   const t = { ...DEFAULT_TARIFFS, ...(tariffs || {}) };
   const regime = opts.regime || 'rebu';
   const buy = mid(v.dePrice);
-  const sell = mid(v.esPrice);
-  if (!buy || !sell) return null;
+  const asked = mid(v.esPrice);
+  // Se vende por debajo del precio anunciado: se descuenta el regateo habitual.
+  const sell = Math.round(asked * (1 - n(t.rebaja_venta_pct) / 100));
+  if (!buy || !asked) return null;
 
   const years = v.years || [];
   const year = Math.round((n(years[0]) + n(years[1] ?? years[0])) / 2) || refDate.getFullYear() - 5;
@@ -30,7 +32,8 @@ export function catalogEstimate(v = {}, tariffs = DEFAULT_TARIFFS, refDate = new
 
   const iedmt = calcIedmt({ co2: n(v.co2), newPrice: n(v.newPrice), firstRegDate, refDate }).quota;
   const lines = [
-    { label: 'Transporte en camión hasta A Coruña', amount: n(t.transporte_camion) },
+    { label: 'Logística (1 rodando + 2 en camión, media por coche)', amount: n(t.transporte_mixto ?? t.transporte_camion) },
+    { label: 'Reserva para imprevistos mecánicos', amount: n(t.imprevistos) },
     { label: 'ITV de importación + ficha técnica', amount: n(diesel ? t.itv_turismo_diesel : t.itv_turismo_gasolina) + n(t.itv_ficha_matriculacion) },
     { label: 'Impuesto de matriculación (576)', amount: Math.round(iedmt) },
     { label: 'Tasa DGT + placas + gestoría', amount: n(t.dgt_matriculacion) + n(t.placas_matricula) + n(t.gestoria) },
@@ -51,7 +54,7 @@ export function catalogEstimate(v = {}, tariffs = DEFAULT_TARIFFS, refDate = new
     vat = Math.round(calcSaleVat({ salePriceGross: sell, purchaseCost: buy, regime }).vat);
   }
   const profit = gross - vat - irpf;
-  return { buy, sell, expenses, lines, vat, irpf, regime, totalCost, gross, profit, year };
+  return { buy, sell, asked, expenses, lines, vat, irpf, regime, totalCost, gross, profit, year };
 }
 
 /** Semáforo sencillo para mostrar al usuario. */

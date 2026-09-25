@@ -11,7 +11,8 @@
     "catalog:stats": "node scripts/catalog-stats.mjs",
     "preview": "vite preview",
     "smoke": "node scripts/smoke.mjs",
-    "prices:check": "node scripts/check-prices.mjs"
+    "prices:check": "node scripts/check-prices.mjs",
+    "scrape:de": "node scripts/autoscout-de-scrape.mjs --import"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.1",
