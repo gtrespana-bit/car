@@ -18,6 +18,32 @@ En Galicia concurren factores geográficos específicos que determinan el valor 
 
 ## 📊 MATRIZ COMPLETA POR SEGMENTOS DE MERCADO
 
+> ### ⚠ REVISIÓN DE PRECIOS (24-09-2026)
+>
+> Las horquillas de esta matriz se escribieron pensando en unidades de
+> **pocos kilómetros** (80-110k) y en compras por debajo del precio de anuncio.
+> Se han contrastado contra anuncios reales capturados el 24-09-2026 en
+> Mobile.de, AutoScout24.de, coches.net, Autocasión, Wallapop y Milanuncios
+> (ver `src/data/catalog/marketEvidence.js`) y hay dos correcciones importantes:
+>
+> 1. **El margen real depende del kilometraje más que del modelo.** Al
+>    kilometraje de referencia del catálogo —que es el habitual en una
+>    importación, no el de un coche de 80.000 km— dos de los «ganadores» de esta
+>    tabla **dan pérdidas**:
+>    - Škoda Octavia Combi 2.0 TDI a 162.000 km → **−691 €** (particular) / −856 € (REBU)
+>    - BMW 320d Touring a 162.000 km → **−266 €** (particular) / −505 € (REBU)
+>
+>    No significa que no se puedan vender: significa que solo son negocio con
+>    km bajos o comprando muy por debajo del precio de anuncio.
+> 2. **Los que sí aguantan** al km de referencia: Golf 7.5 2.0 TDI 150 CV
+>    (+2.134 € como particular), Golf VIII 2.0 TDI (+4.260 €), Tiguan II 2.0 TDI
+>    (+3.459 €), Golf GTD 184 CV (+4.519 €).
+>
+> La tabla de abajo se conserva como referencia estratégica de qué modelos
+> buscar, **pero la cifra que manda es la del catálogo**, que lleva el origen de
+> cada precio y se audita con `npm run prices:check`.
+
+
 ---
 
 ### SEGMENTO 1: COMPACTOS Y FAMILIARES (SEGMENTOS C & D)

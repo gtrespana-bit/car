@@ -38,7 +38,7 @@ Puesta en marcha en [`docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md`](docs/09_SUP
 | --- | --- |
 | **Cuadro de mando** | Caja, capital en stock, beneficio neto, impuestos pendientes, avisos operativos y cobros/pagos a 90 días |
 | **Flota y stock** | Cada vehículo con su coste real, estado en el flujo (10 pasos), documentación y margen neto. Vista tabla y tablero |
-| **Catálogo** | **1.104 variantes de 37 marcas** (101 curadas + 1.003 generadas) con fiabilidad de motor, precio estimado DE/ES y rotación |
+| **Catálogo** | **1.104 variantes de 37 marcas** con fiabilidad de motor, precio de compra (DE) y venta (ES) **con el origen de cada cifra declarado**, y rotación. Ver [Precios](#-precios-de-compra-y-venta-de-dónde-sale-cada-cifra) |
 | **Simulador de importación** | Coste total desglosado, impuestos exactos, precio sugerido, punto de equilibrio y análisis de sensibilidad |
 | **Clientes y ventas** | CRM con fases, embudo, presupuestos y tareas con vencimiento |
 | **Contabilidad** | Cobros y pagos del vehículo y de estructura, resultados por meses, tesorería y rentabilidad por marca/modelo/segmento |
@@ -49,6 +49,81 @@ Puesta en marcha en [`docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md`](docs/09_SUP
 | **Fotos** | Galería por vehículo guardada en IndexedDB (redimensionada a 1.600 px), con foto principal y orden, visible en la flota y usable en el anuncio |
 | **Informes** | Cuenta de resultados, valoración de stock, carga fiscal y evolución mensual. Imprimible en PDF |
 | **Ajustes** | Empresa, régimen fiscal, tarifas editables del ejercicio, respaldo de datos y fuentes de cada cifra |
+
+### 💶 Precios de compra y venta: de dónde sale cada cifra
+
+Los precios del catálogo **no son una fórmula inventada**: cada horquilla declara su
+origen en la ficha (`priceSource`) y se muestra en la interfaz.
+
+| Origen | Qué significa | Cobertura |
+| --- | --- | --- |
+| **Ajustado a anuncios** | Regresión sobre los anuncios reales, usando año, motor, combustible y km | 78 compra · 76 venta |
+| **Contrastado con anuncios** | Cuantiles de anuncios de esa misma motorización | 20 compra · 15 venta |
+| **Anuncios de la generación** | Se extrapola de anuncios de la generación ajustando por potencia | 29 compra · 14 venta |
+| **Estimación del modelo** | Curva de depreciación **recalibrada** contra lo verificado | 876 compra · 898 venta |
+
+Es decir: **127 variantes tienen el precio de compra respaldado por anuncios y 105 el de
+venta** (20 modelos); el resto se estima con el modelo calibrado sobre esos mismos
+anuncios.
+
+- **Evidencia:** `src/data/catalog/marketEvidence.js` — **474 observaciones** con fuente,
+  URL, año, km, motor y precio, capturadas el 24-09-2026 en Mobile.de, AutoScout24.de,
+  coches.net, Autocasión, Coches.com, Autohero, HR Motor, AutoUncle, Spoticar,
+  autoanzeigen.de, Wallapop, Milanuncios y Ocasionplus.
+- **Modelo ajustado:** `src/data/catalog/priceModel.js` estima por mínimos cuadrados
+  `ln(precio) = β_grupo + α·(año−2019) + γ·(km/1000)`, donde el grupo es
+  marca + modelo + generación + combustible + franja de potencia (25 CV). Si un grupo
+  tiene pocos anuncios se sube un nivel (generación → modelo) para no ajustar ruido.
+  Calidad actual: **R² 0,892 en compra y 0,892 en venta**, dispersión σ ≈ 8,8-9,1 %.
+- **Sin extrapolaciones a ciegas:** fuera del rango observado (años 2014-2025,
+  13.700-229.000 km) la regresión no se aplica y se usa el modelo calibrado.
+- **Calibración:** donde no hay anuncios el modelo no usa un nivel de precios propio;
+  se multiplica por el factor que lo alinea con lo verificado (compra ×1,165, venta ×1,035)
+  y, en venta, por la corrección del diferencial ES/DE **de ese modelo**.
+- **Auditoría:** `npm run prices:check` reproduce los **474 anuncios uno por uno** con su
+  año, motor y km (error mediano 5,5 %, 9 de cada 10 por debajo del 16 %) y aborta si una
+  horquilla es incoherente, si un motor de más potencia se tasa por debajo, si un anuncio
+  cae fuera de los años o del combustible de su generación, o si una ficha curada
+  contradice al catálogo.
+- **Limitación conocida:** el modelo de depreciación usa un único PVP por generación, así
+  que en generaciones con motores muy distintos (p. ej. Corolla gasolina vs híbrido) y sin
+  anuncios propios puede equivocarse en torno a un 25 %. Por eso esas fichas van marcadas
+  como «estimación del modelo» y no como dato verificado.
+- **Cobertura:** 20 modelos de los ~240 del catálogo tienen anuncios propios. Los demás se
+  apoyan en el modelo global (coeficientes de año y km ajustados sobre los 474 anuncios),
+  que es mejor que una curva supuesta pero **no es una verificación coche a coche**.
+- **Precio de un coche concreto:** `priceAt({ brand, model, gen, cv, fuel, market, year, km })`
+  da la horquilla para un vehículo real, no para la ficha media de la generación.
+- **Kilometraje:** todas las horquillas se expresan al **km de referencia** de cada
+  generación (visible en la ficha). Un coche con 40.000 km menos vale bastante más:
+  no uses la horquilla tal cual para un coche concreto.
+- **Ganancia:** el catálogo calcula el beneficio según el régimen elegido
+  (particular → IRPF sobre la ganancia; REBU → IVA del margen; general → IVA 21 %).
+  Por defecto se muestra el de **particular**, que es el de la Fase 1.
+
+### Cuestión abierta: el diferencial España/Alemania
+
+Hay dos formas de medirlo con los anuncios y **todavía no coinciden**:
+
+- Comparando anuncios sueltos de los dos países (mismo modelo, año y km parecidos)
+  sale prácticamente **paridad**. Pero esas parejas no tienen el mismo motor ni el mismo
+  acabado, así que esa cifra no es fiable.
+- En las 142 fichas con anuncios propios, el catálogo da una venta **~18 % por encima**
+  de la compra. En las 861 fichas estimadas da **~30 %**.
+
+Se intentó corregir los precios con la primera cifra y el 94 % del catálogo pasaba a
+dar pérdidas, cosa que contradice lo que se ve comprando y vendiendo de verdad. Esa
+corrección se retiró. **Ninguna corrección global se aplica a los precios**:
+`npm run prices:check` informa de la discrepancia en cada ejecución.
+
+Qué significa en la práctica: el beneficio de las fichas **con anuncios** (mediana
+≈ 150 € en REBU) es el que se apoya en precios reales; el de las **estimadas** (mediana
+≈ 1.470 €) puede estar sobrevalorado. Antes de comprar una ficha estimada, contrasta
+su precio de venta en España.
+
+> ⚠ Sirven para decidir rápido, no para liquidar impuestos: para eso está el valor
+> venal de la Orden de Hacienda. Y el acabado, el estado y el km real del coche que
+> tengas delante mandan sobre cualquier tabla.
 
 ### Ventas y movilidad
 

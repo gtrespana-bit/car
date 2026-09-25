@@ -3,6 +3,26 @@
 
 Este informe presenta un análisis empírico con **precios reales de mercado contrastados en tiempo real**, comprobando el diferencial de precios, el impacto impositivo exacto (Modelo 576 AEAT, tasas DGT, ITV gallega, IVTM local) y el margen neto limpio tras la retención de IRPF.
 
+> ### ⚠ NOTA SOBRE LAS CIFRAS DE ESTE INFORME (24-09-2026)
+>
+> Los anuncios citados aquí son reales y siguen siendo válidos como ejemplos.
+> Dos precisiones para no fiarse de más:
+>
+> - **El escandallo del Golf está hecho como PARTICULAR** (sin IVA en la venta,
+>   IRPF del 19 % sobre la ganancia). El catálogo muestra por defecto ese mismo
+>   criterio; si operas como autónomo o SL el IVA del REBU se come una parte del
+>   margen y el resultado baja unos 250-300 € por coche.
+> - **El margen depende del kilometraje.** El Golf de este informe tiene 109.163 km.
+>   Al kilometraje de referencia del catálogo (135.000 km para el Golf 7.5) la
+>   ganancia estimada es de **+3.462 €** en REBU, no 2.368 €.
+>- **El diferencial España/Alemania aún no está medido con precisión.** Las fichas con
+>   anuncios reales dan una venta ~18 % por encima de la compra; las estimadas, ~30 %.
+>   Los márgenes de las fichas estimadas pueden estar inflados: contrasta la venta.
+>
+> Todos los precios del catálogo están ahora contrastados contra anuncios reales
+> (`src/data/catalog/marketEvidence.js`) y verificados por `npm run prices:check`.
+
+
 ---
 
 ## 1. Metodología y Criterios de Selección para A Coruña

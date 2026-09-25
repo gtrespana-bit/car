@@ -4,13 +4,21 @@
 //  gastos típicos de traer el coche de Alemania y venderlo en A Coruña.
 // ============================================================================
 import { DEFAULT_TARIFFS } from './rates.js';
-import { calcIedmt, calcSaleVat } from './taxes.js';
+import { calcIedmt, calcSaleVat, calcIrpfGain } from './taxes.js';
 
 const mid = (r) => (Array.isArray(r) && r.length ? Math.round(((r[0] ?? 0) + (r[1] ?? r[0] ?? 0)) / 2) : 0);
 const n = (x) => Number(x) || 0;
 
-export function catalogEstimate(v = {}, tariffs = DEFAULT_TARIFFS, refDate = new Date()) {
+/**
+ * @param opts.regime 'rebu' (autónomo/SL) | 'general' | 'particular'
+ *        En Fase 1 se opera como PARTICULAR: no hay IVA en la venta, la
+ *        ganancia tributa en el IRPF (base del ahorro). Aplicar el IVA de REBU
+ *        a un particular subestima el beneficio; no aplicar IRPF a una empresa
+ *        lo sobreestima.
+ */
+export function catalogEstimate(v = {}, tariffs = DEFAULT_TARIFFS, refDate = new Date(), opts = {}) {
   const t = { ...DEFAULT_TARIFFS, ...(tariffs || {}) };
+  const regime = opts.regime || 'rebu';
   const buy = mid(v.dePrice);
   const sell = mid(v.esPrice);
   if (!buy || !sell) return null;
@@ -31,9 +39,19 @@ export function catalogEstimate(v = {}, tariffs = DEFAULT_TARIFFS, refDate = new
   lines.forEach((l) => { l.amount = Math.round(l.amount); });
   const expenses = Math.round(lines.reduce((a, l) => a + l.amount, 0));
   const totalCost = buy + expenses;
-  const vat = Math.round(calcSaleVat({ salePriceGross: sell, purchaseCost: buy, regime: 'rebu' }).vat);
-  const profit = sell - totalCost - vat;
-  return { buy, sell, expenses, lines, vat, totalCost, profit, year };
+
+  const gross = sell - totalCost;
+  let vat = 0;
+  let irpf = 0;
+  if (regime === 'particular') {
+    // Venta entre particulares: no se repercute IVA. La ganancia patrimonial
+    // (precio de venta − coste total) va a la base del ahorro del IRPF.
+    irpf = Math.round(calcIrpfGain(gross).tax);
+  } else {
+    vat = Math.round(calcSaleVat({ salePriceGross: sell, purchaseCost: buy, regime }).vat);
+  }
+  const profit = gross - vat - irpf;
+  return { buy, sell, expenses, lines, vat, irpf, regime, totalCost, gross, profit, year };
 }
 
 /** Semáforo sencillo para mostrar al usuario. */
