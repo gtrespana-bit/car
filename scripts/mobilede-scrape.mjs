@@ -93,7 +93,7 @@ async function get(url, json) {
   for (let i = 0; i < 4; i++) {
     try {
       const r = await fetch(url, { headers: UA });
-      if (r.status === 429 || r.status >= 500) { await sleep(10000 * (i + 1)); continue; }
+      if (r.status === 429 || r.status >= 500) { blocked++; console.log(`  mobile.de pide esperar (${r.status}), reintento en ${5 * (i + 1)} s`); await sleep(5000 * (i + 1)); continue; }
       if (!r.ok) return { error: r.status, html: await r.text().catch(() => '') };
       return json ? { data: await r.json() } : { html: await r.text() };
     } catch (e) { await sleep(3000); }
@@ -141,48 +141,56 @@ mkdirSync('data/mobilede', { recursive: true });
 const PROG = 'data/mobilede/progress.jsonl', done = new Map();
 if (existsSync(PROG) && !process.argv.includes('--reset')) for (const l of readFileSync(PROG, 'utf8').split('\n').filter(Boolean)) { const d = JSON.parse(l); done.set(d.name, d); }
 let debugSaved = false;
-const PAUSE = 1500, PAGES = 10; // mobile.de es más estricto: 1 búsqueda a la vez
+const PAUSE = +(arg('--pausa') ?? 400), PAGES = 50, WORKERS = +(arg('--hilos') ?? 3);
+let blocked = 0;
 
-for (const g of [...groups.values()].sort((a, b) => b.n - a.n)) {
+// Una sola búsqueda por grupo con todo el rango de años (antes era una por año = muchas más peticiones).
+async function scrapeGroup(g) {
   const name = `${g.gen} · ${g.fuel} ${g.cv} CV · ${g.y0}-${g.y1}`;
-  if (only && !name.toLowerCase().includes(only)) continue;
-  if (done.has(name)) { const d = done.get(name); d.rows.forEach((r) => rows.push(r)); report.push(d.line); continue; }
+  const t0 = Date.now();
   const [make, names, body] = M[g.gen];
   const ids = await ms(make, names);
-  if (!ids.length) { report.push(`${name}: modelo "${names}" no encontrado en mobile.de`); console.log(report.at(-1)); continue; }
+  if (!ids.length) { report.push(`${name}: modelo "${names}" no encontrado en mobile.de`); console.log(report.at(-1)); return; }
   let n = 0, total = 0; const mine = [];
-  for (let year = g.y0; year <= g.y1; year++) {
-    for (let p = 1; p <= PAGES; p++) {
-      const q = new URLSearchParams({ isSearchRequest: 'true', vc: 'Car', s: 'Car', dam: 'false', fr: `${year}:${year}`, pw: `${kw(g.cv) - tol(g)}:${kw(g.cv) + tol(g)}`, pageNumber: p, sb: 'rel', od: 'up' });
-      if (FT[g.fuel]) q.set('ft', FT[g.fuel]);
-      if (body) body.split('|').forEach((b) => q.append('c', b));
-      const url = 'https://www.mobile.de/es/veh%C3%ADculos/buscar.html?' + q + ids.map((x) => '&ms=' + encodeURIComponent(x)).join('');
-      const j = await get(url);
-      if (j.error) { console.log(`${name} ${year} p${p}: error ${j.error}`); if (j.html && !debugSaved) { writeFileSync('data/mobilede/debug.html', j.html); debugSaved = true; } break; }
-      const { items, total: t } = parse(j.html);
-      if (p === 1) total += t;
-      if (!items.length) { if (p === 1 && t > 0 && !debugSaved) { writeFileSync('data/mobilede/debug.html', j.html); debugSaved = true; } break; }
-      let fresh = 0;
-      for (const a of items) {
-        if (seen.has(a.id)) continue;
-        seen.add(a.id); fresh++;
-        if (a.country !== 'DE' || a.damaged) continue;                                  // solo Alemania, sin siniestros
-        if (!(a.year === year && a.km > 1000 && a.km < 350000 && a.price > 3000 && a.price < 150000)) continue;
-        if (a.kw && Math.abs(a.kw - kw(g.cv)) > tol(g)) continue;
-        if (BAN[g.gen] && BAN[g.gen].test(a.text)) continue;
-        mine.push([g.brand, g.model, g.gen, 'DE', g.engine, a.year, a.km, a.price, `mobile.de (${a.priv ? 'particular' : 'concesionario'}${a.vat ? ', IVA deducible' : ''})`, a.url]);
-        n++;
-      }
-      if (items.length < 15 || !fresh) break;
-      await sleep(PAUSE);
+  for (let p = 1; p <= PAGES; p++) {
+    const q = new URLSearchParams({ isSearchRequest: 'true', vc: 'Car', s: 'Car', dam: 'false', fr: `${g.y0}:${g.y1}`, pw: `${kw(g.cv) - tol(g)}:${kw(g.cv) + tol(g)}`, pageNumber: p, sb: 'rel', od: 'up' });
+    if (FT[g.fuel]) q.set('ft', FT[g.fuel]);
+    if (body) body.split('|').forEach((b) => q.append('c', b));
+    const url = 'https://www.mobile.de/es/veh%C3%ADculos/buscar.html?' + q + ids.map((x) => '&ms=' + encodeURIComponent(x)).join('');
+    const j = await get(url);
+    if (j.error) { console.log(`${name} p${p}: error ${j.error}`); if (j.html && !debugSaved) { writeFileSync('data/mobilede/debug.html', j.html); debugSaved = true; } break; }
+    const { items, total: t } = parse(j.html);
+    if (p === 1) total = t;
+    if (!items.length) { if (p === 1 && t > 0 && !debugSaved) { writeFileSync('data/mobilede/debug.html', j.html); debugSaved = true; } break; }
+    let fresh = 0;
+    for (const a of items) {
+      if (seen.has(a.id)) continue;
+      seen.add(a.id); fresh++;
+      if (a.country !== 'DE' || a.damaged) continue;                                  // solo Alemania, sin siniestros
+      if (!(a.year >= g.y0 && a.year <= g.y1 && a.km > 1000 && a.km < 350000 && a.price > 3000 && a.price < 150000)) continue;
+      if (a.kw && Math.abs(a.kw - kw(g.cv)) > tol(g)) continue;
+      if (BAN[g.gen] && BAN[g.gen].test(a.text)) continue;
+      mine.push([g.brand, g.model, g.gen, 'DE', g.engine, a.year, a.km, a.price, `mobile.de (${a.priv ? 'particular' : 'concesionario'}${a.vat ? ', IVA deducible' : ''})`, a.url]);
+      n++;
     }
+    if (items.length < 15 || !fresh) break;
     await sleep(PAUSE);
   }
   const line = `${name}: ${n} válidos (mobile.de decía ${total} en total)`;
   mine.forEach((r) => rows.push(r)); report.push(line);
   appendFileSync(PROG, JSON.stringify({ name, line, rows: mine }) + '\n');
-  console.log(`[${report.length}] ${line}`);
+  console.log(`[${report.length}/${groups.size}] ${line} · ${Math.round((Date.now() - t0) / 1000)} s`);
 }
+
+const queue = [];
+for (const g of [...groups.values()].sort((a, b) => b.n - a.n)) {
+  const name = `${g.gen} · ${g.fuel} ${g.cv} CV · ${g.y0}-${g.y1}`;
+  if (only && !name.toLowerCase().includes(only)) continue;
+  if (done.has(name)) { const d = done.get(name); d.rows.forEach((r) => rows.push(r)); report.push(d.line); continue; }
+  queue.push(g);
+}
+console.log(`${queue.length} grupos pendientes · ${WORKERS} a la vez`);
+await Promise.all(Array.from({ length: WORKERS }, async () => { while (queue.length) await scrapeGroup(queue.shift()); }));
 
 writeFileSync('data/mobilede/rows.json', JSON.stringify(rows));
 writeFileSync('data/mobilede/report.txt', `Captura ${new Date().toISOString()}\n` + report.join('\n') + `\nTotal: ${rows.length}\n`);
