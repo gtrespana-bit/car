@@ -2,7 +2,9 @@
 // Para cada grupo modelo+generación+combustible+potencia se llevan todos los
 // anuncios al mismo año y km con los coeficientes ajustados, y se calcula el
 // beneficio neto con los gastos reales de importación.
-import { MARKET_OBSERVATIONS as O, cvOf, fuelOf } from '../src/data/catalog/marketEvidence.js';
+import { MARKET_OBSERVATIONS, cvOf, fuelOf } from '../src/data/catalog/marketEvidence.js';
+import { CANDIDATE_OBSERVATIONS } from '../src/data/catalog/candidateEvidence.js';
+const O = [...MARKET_OBSERVATIONS, ...CANDIDATE_OBSERVATIONS];
 import { priceFit } from '../src/data/catalog/priceModel.js';
 import { catalogEstimate } from '../src/domain/catalogEstimate.js';
 import { GENERATED_DB } from '../src/data/catalog/index.js';
