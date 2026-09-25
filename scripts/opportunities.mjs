@@ -34,6 +34,7 @@ function groupFit(rows, Y, K) {
 const groups = new Map();
 for (const o of O) {
   if (o.kind !== 'anuncio') continue;
+  if (['Seat', 'Cupra'].includes(o.brand)) continue; // fabricadas en España: no compensa importarlas
   const cv = cvOf(o); const fuel = fuelOf(o);
   if (!cv || !fuel) continue;
   const band = Math.round(cv / 30) * 30;

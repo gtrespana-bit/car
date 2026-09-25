@@ -32,7 +32,6 @@ Todos los anuncios de cada grupo se llevan al mismo año y km. Beneficio neto en
 | 🟠 Marginal | Mercedes-Benz GLA (GLA H247) Diésel ~150 CV | 19/9 | 2021 · 89k | 25.516 € / 26.706 € | 29.244 € | +10 % | **614 €** | -369 € | -263 € | 1021 € | 2 % | 9 · 29.244 € · **614 €** | ⚠️ media |
 | 🟠 Marginal | BMW Serie 1 (Serie 1 F20 LCI) Diésel ~150 CV | 18/5 | 2018 · 106k | 15.621 € / 16.221 € | 18.263 € | +13 % | **542 €** | 47 € | -672 € | 811 € | 3 % | 4 anuncios (mín. 8) | ❌ insuficiente |
 | 🟠 Marginal | Volkswagen Golf (Golf VII.5) Diésel ~150 CV | 21/11 | 2019 · 112k | 15.731 € / 16.166 € | 18.349 € | +14 % | **523 €** | 163 € | 4 € | 791 € | 3 % | 4 anuncios (mín. 8) | ❌ insuficiente |
-| 🟠 Marginal | Seat Tarraco (Tarraco) Diésel ~150 CV | 12/4 | 2020 · 123k | 18.907 € / 19.363 € | 22.044 € | +14 % | **326 €** | -51 € | 35 € | 705 € | 2 % | 4 anuncios (mín. 8) | ❌ insuficiente |
 | 🟠 Marginal | Dacia Duster (Duster II) Diésel ~115 CV | 27/9 | 2020 · 99k | 13.116 € / 13.688 € | 15.317 € | +12 % | **178 €** | -295 € | -167 € | 454 € | 1 % | 2 anuncios (mín. 8) | ❌ insuficiente |
 | 🟠 Marginal | BMW X1 (X1 F48) Diésel ~150 CV | 20/15 | 2018 · 112k | 17.000 € / 18.127 € | 19.160 € | +6 % | **144 €** | -787 € | -1175 € | 420 € | 1 % | 3 anuncios (mín. 8) | ❌ insuficiente |
 | 🔴 No rentable | Volkswagen Passat Variant (Passat Variant B8) Diésel ~150 CV | 22/12 | 2019 · 130k | 15.349 € / 16.730 € | 17.876 € | +7 % | **-92 €** | -1233 € | -1136 € | 281 € | -1 % | 6 anuncios (mín. 8) | ❌ insuficiente |
@@ -43,10 +42,8 @@ Todos los anuncios de cada grupo se llevan al mismo año y km. Beneficio neto en
 | 🔴 No rentable | Kia Sportage (Sportage QL) Diésel ~136 CV | 9/10 | 2019 · 94k | 15.683 € / 17.242 € | 17.423 € | +1 % | **-608 €** | -1896 € | -2342 € | -306 € | -3 % | 5 anuncios (mín. 8) | ❌ insuficiente |
 | 🔴 No rentable | Toyota Corolla Touring Sports (Corolla TS E210) Híbrido ~184 CV | 20/9 | 2020 · 87k | 21.786 € / 23.162 € | 22.959 € | -1 % | **-663 €** | -1835 € | -1982 € | -459 € | -3 % | 5 anuncios (mín. 8) | ❌ insuficiente |
 | 🔴 No rentable | Volvo XC60 (XC60 II) Diésel ~190 CV | 22/22 | 2019 · 110k | 24.401 € / 26.138 € | 26.321 € | +1 % | **-805 €** | -2241 € | -1558 € | -472 € | -3 % | 7 anuncios (mín. 8) | ❌ insuficiente |
-| 🔴 No rentable | Seat Ateca (Ateca restyling) Diésel ~150 CV | 11/12 | 2022 · 76k | 22.421 € / 23.090 € | 23.957 € | +4 % | **-1144 €** | -1696 € | -2124 € | -877 € | -5 % | 3 anuncios (mín. 8) | ❌ insuficiente |
 | 🔴 No rentable | Volvo XC40 (XC40) Diésel ~150 CV | 10/4 | 2020 · 99k | 21.001 € / 21.525 € | 22.412 € | +4 % | **-1145 €** | -1578 € | -1352 € | -900 € | -5 % | 4 anuncios (mín. 8) | ❌ insuficiente |
 | 🔴 No rentable | Peugeot 3008 (3008 II) Diésel ~130 CV | 6/19 | 2021 · 95k | 16.576 € / 18.192 € | 16.983 € | -7 % | **-1305 €** | -2850 € | -1765 € | -1234 € | -7 % | 7 anuncios (mín. 8) | ❌ insuficiente |
-| 🔴 No rentable | Cupra Formentor (Formentor) Diésel ~150 CV | 22/8 | 2022 · 92k | 21.998 € / 23.093 € | 23.290 € | +1 % | **-1472 €** | -2377 € | -2536 € | -1248 € | -6 % | 3 anuncios (mín. 8) | ❌ insuficiente |
 | 🔴 No rentable | Nissan Qashqai (Qashqai J11) Diésel ~115 CV | 16/14 | 2020 · 92k | 16.084 € / 17.026 € | 16.261 € | -4 % | **-1495 €** | -2406 € | -1962 € | -1464 € | -8 % | 1 anuncios (mín. 8) | ❌ insuficiente |
 | 🔴 No rentable | Volkswagen T-Roc (T-Roc) Diésel ~150 CV | 16/11 | 2020 · 93k | 20.838 € / 21.962 € | 21.516 € | -2 % | **-1575 €** | -2581 € | -3027 € | -1457 € | -7 % | 5 anuncios (mín. 8) | ❌ insuficiente |
 | 🔴 No rentable | Hyundai Tucson (Tucson NX4) Microhíbrido ~136 CV | 26/8 | 2021 · 77k | 20.884 € / 22.562 € | 21.670 € | -4 % | **-1666 €** | -3208 € | -1998 € | -1530 € | -7 % | 3 anuncios (mín. 8) | ❌ insuficiente |
@@ -56,5 +53,5 @@ Todos los anuncios de cada grupo se llevan al mismo año y km. Beneficio neto en
 | 🔴 No rentable | Skoda Karoq (Karoq) Diésel ~150 CV | 23/24 | 2021 · 107k | 20.835 € / 22.658 € | 19.115 € | -16 % | **-3938 €** | -5761 € | -4697 € | -3938 € | -17 % | 11 · 19.681 € · **-3372 €** | ⚠️ media |
 | 🔴 No rentable | Kia Sportage (Sportage NQ5) Microhíbrido ~136 CV | 4/9 | 2022 · 91k | 22.018 € / 23.937 € | 18.542 € | -23 % | **-5944 €** | -7863 € | -6463 € | -5944 € | -24 % | 3 anuncios (mín. 8) | ❌ insuficiente |
 
-**Resumen:** 45 grupos medidos · 🟢 9 · 🟡 6 · 🟠 10 · 🔴 20
+**Resumen:** 42 grupos medidos · 🟢 9 · 🟡 6 · 🟠 9 · 🔴 18
 

@@ -203,7 +203,8 @@ function reconcileWithCatalog(list) {
 
 export const CURATED_RECONCILED = reconcileWithCatalog(CURATED_DB);
 
-export const VEHICLE_DB = [...CURATED_RECONCILED, ...GENERATED_DB];
+export const VEHICLE_DB = [...CURATED_RECONCILED, ...GENERATED_DB]
+  .filter((v) => !['Seat', 'Cupra'].includes(v.brand)); // fabricadas en España: no compensa importarlas
 export const CURATED_COUNT = CURATED_DB.length;
 export const GENERATED_COUNT = GENERATED_DB.length;
 

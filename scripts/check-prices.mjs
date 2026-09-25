@@ -11,6 +11,7 @@
 import {
   GENERATED_DB,
   MODEL_DATA,
+  EXCLUDED_BRANDS,
   calibrationFactors,
   powerFactor,
   priceAt,
@@ -87,6 +88,7 @@ section('1. La evidencia está bien formada');
   const gens = new Set(MARKET_OBSERVATIONS.map((o) => `${o.brand}|${o.model}|${o.gen}`));
   const unknown = [...gens].filter((k) => {
     const [b, m, g] = k.split('|');
+    if (EXCLUDED_BRANDS.includes(b)) return false; // marcas excluidas a propósito (fabricadas en España)
     return !MODEL_DATA.some((mm) => mm.b === b && mm.m === m && mm.g.some((gg) => gg[0] === g));
   });
   if (unknown.length) fail(`evidencia apuntando a generaciones inexistentes: ${unknown.join(', ')}`);

@@ -141,7 +141,11 @@ const KM_PER_YEAR = 18000;
  */
 const MODEL_SPREAD = 0.13;
 
-export const MODEL_DATA = [...VAG, ...PREMIUM, ...FRANCESES, ...ASIATICOS, ...OTROS];
+// Marcas fabricadas en España: en el mercado español ya son más baratas que en
+// Alemania, así que importarlas no compensa. Se excluyen del catálogo de compra.
+export const EXCLUDED_BRANDS = ['Seat', 'Cupra'];
+export const MODEL_DATA = [...VAG, ...PREMIUM, ...FRANCESES, ...ASIATICOS, ...OTROS]
+  .filter((m) => !EXCLUDED_BRANDS.includes(m.brand ?? m.b));
 
 /** Rangos teóricos de una generación (sin evidencia), a su km de referencia. */
 function modelRanges(pvp, from, to, demand, currentYear) {
