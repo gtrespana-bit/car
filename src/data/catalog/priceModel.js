@@ -177,8 +177,25 @@ function groupIndexFor(fit, brand, model, gen, cv, fuel) {
 export function predictPrice({ market, brand, model, gen, cv, fuel, year, km }) {
   const fit = FITS[market];
   if (!fit) return null;
-  const gi = groupIndexFor(fit, brand, model, gen, cv, fuel);
+  let gi = groupIndexFor(fit, brand, model, gen, cv, fuel);
   if (gi === null) return null;
+  let borrowed = false;
+  // Si esta potencia no tiene grupo propio, el grupo genérico se ajusta sólo
+  // con los anuncios «sobrantes» (p. ej. un GTD de 184 CV y filas sin motor), y
+  // tasaba un Golf 1.6 TDI 116 CV por encima del 2.0 TDI 150 CV. Se parte del
+  // grupo de potencia MÁS CERCANA de la misma generación y combustible, y el
+  // llamador aplica el diferencial de potencia desde ahí.
+  if (!/\|\d+$/.test(fit.groups[gi]) && Number.isFinite(Number(cv)) && fuel) {
+    const pref = `${brand}|${model}|${gen}|${fuel}|`;
+    let best = null;
+    fit.groups.forEach((g, i) => {
+      if (!g.startsWith(pref)) return;
+      const ref = fit.groupCvRef.get(g) || Number(g.slice(pref.length));
+      const d = Math.abs(ref - Number(cv));
+      if (best === null || d < best.d) best = { i, d };
+    });
+    if (best && best.d > 0) { gi = best.i; borrowed = true; }
+  }
   const y = Number(year);
   const k = Number(km);
   // Sin año o km válidos no se puede tasar: mejor null que un número inventado.
@@ -192,7 +209,7 @@ export function predictPrice({ market, brand, model, gen, cv, fuel, year, km }) 
   const group = fit.groups[gi];
   // Si el grupo no distingue potencia, se aplica el diferencial por CV para
   // que un 184 CV no valga lo mismo que un 105 CV dentro del mismo modelo.
-  const distinguishesCv = /\|\d+$/.test(group);
+  const distinguishesCv = !borrowed && /\|\d+$/.test(group);
   const distinguishesFuel = /\|(Diésel|Gasolina|Híbrido|Eléctrico|Microhíbrido|GLP|GNC)\|/.test(`${group}|`);
   return {
     price: Math.exp(lp), sigma: fit.sigma, group, r2: fit.r2, n: fit.n,
