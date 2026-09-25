@@ -248,3 +248,20 @@ En el directorio `/docs` dispones de la biblioteca estratégica completa:
 7. [`docs/07_MATRIZ_MODELOS_GANADORES_VS_PROHIBIDOS.md`](docs/07_MATRIZ_MODELOS_GANADORES_VS_PROHIBIDOS.md): Matriz maestra por segmentos (Cupra Formentor, C-HR, Tucson, RAV4, Caddy, T6 150 CV, Duster 4x4, Mercedes 200d OM654, BMW Serie 1 F20 LCI, etc.).
 8. [`docs/08_MANUAL_USO_ERP.md`](docs/08_MANUAL_USO_ERP.md): **Manual de uso del ERP**: cómo se opera cada módulo en el día a día, calendario de modelos tributarios, cifras verificadas de 2026 y las que hay que comprobar antes de declarar.
 9. [`docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md`](docs/09_SUPABASE_BASE_DE_DATOS_Y_USUARIOS.md): **Base de datos y usuarios**: esquema en Supabase, roles y permisos, alta e invitación de usuarios, variables de entorno y solución de problemas.
+
+## Precios de venta desde milanuncios (automático)
+
+milanuncios bloquea con captcha su web, pero su propia web consulta una API de búsqueda pública
+(`searchapi.gw.milanuncios.com/v3/classifieds`) que devuelve año, km, CV, combustible y precio de contado.
+El script `scripts/milanuncios-scrape.mjs` la recorre para **todos** los grupos del catálogo
+(modelo + generación + combustible + potencia ±8 CV, un año cada vez, 100 anuncios por consulta):
+
+```bash
+node scripts/milanuncios-scrape.mjs            # descarga → data/milanuncios/rows.json + report.txt
+node scripts/milanuncios-scrape.mjs --import   # y además los añade a marketEvidence.js (sin duplicar URL)
+node scripts/check-prices.mjs && node scripts/opportunities.mjs > docs/10_OPORTUNIDADES_MEDIDAS.md
+```
+
+Se ejecuta desde cualquier PC con internet (Node 18+). Descarta otras marcas/modelos, carrocerías distintas,
+potencias fuera de ±8 CV, Canarias (IGIC) y precios por debajo de 4.000 €. `docs/extra/milanuncios-workflow.yml`
+es un workflow de GitHub Actions listo para copiar a `.github/workflows/` si quieres que se ejecute solo.

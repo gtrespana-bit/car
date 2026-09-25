@@ -1,54 +1,105 @@
-// Descarga anuncios de coches de milanuncios desde su API pública de búsqueda
-// (la misma que usa la web) y guarda una versión compacta en data/milanuncios/raw.json.
-// Uso: node scripts/milanuncios-scrape.mjs   (necesita Node 18+ con fetch)
-import { writeFileSync, mkdirSync } from 'node:fs';
+// Descarga de milanuncios TODOS los anuncios de los grupos del catálogo
+// (modelo + generación + combustible + potencia + años) usando la API de búsqueda
+// pública que usa su propia web: https://searchapi.gw.milanuncios.com/v3/classifieds
+//
+//   node scripts/milanuncios-scrape.mjs            → data/milanuncios/rows.json
+//   node scripts/milanuncios-scrape.mjs --import   → además los añade a marketEvidence.js
+//
+// Necesita conexión normal a internet (tu PC). Filtros verificados que acepta la API:
+// text, category, fuel, yearFrom/yearTo, hpFrom/hpTo, kilometersFrom/kilometersTo,
+// priceFrom/priceTo y limit (hasta 100). Se hace una consulta por grupo y año.
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { MARKET_OBSERVATIONS as O, cvOf, fuelOf } from '../src/data/catalog/marketEvidence.js';
 
-const QUERIES = [
-  'volkswagen golf', 'volkswagen golf variant', 'volkswagen tiguan', 'volkswagen t-roc', 'volkswagen passat variant', 'volkswagen caddy',
-  'skoda octavia', 'skoda octavia combi', 'skoda kodiaq', 'skoda karoq', 'skoda superb',
-  'audi a3', 'audi q3', 'audi q5', 'audi a4 avant', 'audi a6',
-  'mercedes clase a', 'mercedes glc', 'mercedes clase c', 'mercedes clase e',
-  'bmw serie 1', 'bmw serie 3', 'bmw serie 3 touring', 'bmw serie 5', 'bmw x1', 'bmw x3',
-  'toyota corolla', 'toyota corolla touring sports', 'toyota rav4',
-  'seat leon', 'seat leon st', 'seat ateca', 'cupra formentor',
-  'dacia duster', 'dacia sandero', 'kia sportage', 'hyundai tucson',
-  'volvo xc60', 'nissan qashqai', 'peugeot 3008', 'peugeot 5008',
-];
-const PAGES = Number(process.env.MA_PAGES || 10), LIMIT = 40;
-const attr = (ad, k) => ad.attributes?.find((a) => a.field?.raw === k)?.value?.raw ?? null;
+const API = 'https://searchapi.gw.milanuncios.com/v3/classifieds';
+const FUEL = { 'Diésel': 'diesel', 'Gasolina': 'gasoline', 'Híbrido': 'hybrid', 'Microhíbrido': null, 'Híbrido enchufable': null, 'Eléctrico': 'electric' };
+const HP_TOL = 8, LIMIT = 100; // la API acepta limit=100; nextToken no pagina, así que se consulta año a año
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const seen = new Map();
-const log = [];
-for (const text of QUERIES) {
-  let got = 0;
-  for (let p = 0; p < PAGES; p++) {
-    const url = `https://searchapi.gw.milanuncios.com/v3/classifieds?text=${encodeURIComponent(text)}&category=13&limit=${LIMIT}&offset=${p * LIMIT}&page=${p + 1}`;
-    let j;
-    try {
-      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36', Accept: 'application/json' } });
-      if (!r.ok) { log.push(`${text} p${p}: HTTP ${r.status}`); break; }
-      j = await r.json();
-    } catch (e) { log.push(`${text} p${p}: ${e.message}`); break; }
-    const ads = j.ads || [];
-    let fresh = 0;
-    for (const ad of ads) {
-      if (seen.has(ad.id)) continue;
-      fresh++;
-      seen.set(ad.id, {
-        id: ad.id, query: text, title: ad.title, year: +attr(ad, 'year') || null, km: +attr(ad, 'kilometers') || null,
-        hp: +attr(ad, 'hp') || null, fuel: attr(ad, 'fuel'), gearbox: attr(ad, 'transmission'),
-        price: ad.price?.cash?.value ?? null, financed: ad.price?.financed?.value ?? null,
-        seller: ad.type, province: ad.location?.province?.name, region: ad.location?.region?.name,
-        url: 'https://www.milanuncios.com' + ad.url, published: ad.publicationDate,
-        desc: (ad.description || '').slice(0, 400),
-      });
-    }
-    got += fresh;
-    if (!ads.length || !fresh) break;
-    await sleep(700);
+const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+// 1) Grupos a buscar, sacados de los anuncios que ya tiene el catálogo
+const groups = new Map();
+for (const o of O) {
+  if (o.kind !== 'anuncio') continue;
+  const cv = cvOf(o), fuel = fuelOf(o);
+  if (!cv || !fuel) continue;
+  const k = [o.brand, o.model, o.gen, fuel, Math.round(cv / 5) * 5].join('|');
+  const g = groups.get(k) || { brand: o.brand, model: o.model, gen: o.gen, fuel, cv: Math.round(cv / 5) * 5, y0: 9999, y1: 0, engine: o.engine };
+  g.y0 = Math.min(g.y0, o.year); g.y1 = Math.max(g.y1, o.year);
+  groups.set(k, g);
+}
+
+// La palabra que debe aparecer en el título/descripción para aceptar el anuncio
+const modelWord = (m) => norm(m).replace(/touring sports|estate|variant|avant|combi|touring|serie (\d)/g, (x, d) => d ? `serie ${d}` : '').trim();
+const bodyOk = (g, t) => {
+  const s = norm(t);
+  if (/variant|avant|combi|touring|estate|st\b/.test(norm(g.model)) || /touring sports/.test(norm(g.model))) {
+    return /variant|avant|combi|touring|estate|familiar|\bst\b|ts\b|sports tourer/.test(s);
   }
-  log.push(`${text}: ${got}`);
+  return !/variant|avant|combi|touring|estate|familiar|\bst\b/.test(s);
+};
+
+async function get(url) {
+  for (let i = 0; i < 3; i++) {
+    try {
+      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36', Accept: 'application/json', 'Accept-Language': 'es-ES' } });
+      if (r.ok) return await r.json();
+      if (r.status === 429) await sleep(5000);
+      else return { error: r.status };
+    } catch (e) { await sleep(2000); }
+  }
+  return { error: 'red' };
+}
+const attr = (ad, k) => ad.attributes?.find((a) => a.field?.raw === k)?.value?.raw ?? null;
+
+const rows = [], seen = new Set(), report = [];
+for (const g of groups.values()) {
+  const text = `${g.brand === 'Mercedes-Benz' ? 'mercedes' : norm(g.brand)} ${modelWord(g.model)}`;
+  const p = new URLSearchParams({ text, category: '13', limit: String(LIMIT), yearFrom: g.y0, yearTo: g.y1, hpFrom: g.cv - HP_TOL, hpTo: g.cv + HP_TOL, priceFrom: 4000 });
+  if (FUEL[g.fuel]) p.set('fuel', FUEL[g.fuel]);
+  let n = 0, total = 0;
+  for (let year = g.y0; year <= g.y1; year++) {
+    p.set('yearFrom', year); p.set('yearTo', year);
+    const j = await get(`${API}?${p}`);
+    if (j.error) { report.push(`${g.gen} ${g.fuel} ${g.cv} ${year}: error ${j.error}`); console.log(report.at(-1)); continue; }
+    total += j.pagination?.totalHits?.value ?? 0;
+    for (const ad of j.ads || []) {
+      if (seen.has(ad.id)) continue;
+      seen.add(ad.id);
+      const title = `${ad.title} ${ad.description || ''}`;
+      const year = +attr(ad, 'year'), km = +attr(ad, 'kilometers'), hp = +attr(ad, 'hp');
+      const price = ad.price?.cash?.value;
+      if (!norm(ad.title + ' ' + ad.url).includes(norm(g.brand).split('-')[0])) continue; // otra marca
+      if (!norm(title).includes(modelWord(g.model).split(' ').pop())) continue;       // otro modelo
+      if (!bodyOk(g, title)) continue;                                                   // carrocería distinta
+      if (g.fuel === 'Microhíbrido' && !/48v|mhev|mild|microh|hibrid/.test(norm(title))) continue;
+      if (!(year >= g.y0 && year <= g.y1 && km > 1000 && km < 400000 && price > 4000)) continue;
+      if (Math.abs(hp - g.cv) > HP_TOL) continue;
+      if (/canarias|tenerife|las palmas/.test(norm(ad.location?.province?.name))) continue; // IGIC
+      rows.push([g.brand, g.model, g.gen, 'ES', g.engine, year, km, price,
+        `milanuncios API (${ad.location?.city?.name || ad.location?.province?.name}${ad.type === 'private' ? ', particular' : ''})`,
+        'https://www.milanuncios.com' + ad.url]);
+      n++;
+    }
+    await sleep(800);
+  }
+  report.push(`${g.gen} · ${g.fuel} ${g.cv} CV · ${g.y0}-${g.y1}: ${n} válidos de ${total ?? '?'}`);
+  console.log(report.at(-1));
+  await sleep(800);
 }
 mkdirSync('data/milanuncios', { recursive: true });
-writeFileSync('data/milanuncios/raw.json', JSON.stringify({ capturedAt: new Date().toISOString(), log, ads: [...seen.values()] }, null, 0));
-console.log(log.join('\n'), '\nTotal', seen.size);
+writeFileSync('data/milanuncios/rows.json', JSON.stringify(rows, null, 0));
+writeFileSync('data/milanuncios/report.txt', `Captura ${new Date().toISOString()}\n` + report.join('\n') + `\nTotal: ${rows.length}\n`);
+console.log(`\nTotal ${rows.length} anuncios válidos → data/milanuncios/rows.json`);
+
+if (process.argv.includes('--import')) {
+  const P = 'src/data/catalog/marketEvidence.js';
+  let src = readFileSync(P, 'utf8');
+  const q = (s) => `'${String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+  const fresh = rows.filter((r) => !src.includes(r[9]));
+  const lines = fresh.map(([b, m, g, mk, e, y, k, p, s, u]) =>
+    `  { brand: ${q(b)}, model: ${q(m)}, gen: ${q(g)}, market: ${q(mk)}, kind: 'anuncio', engine: ${q(e)}, year: ${y}, km: ${k}, price: ${p}, source: ${q(s)}, url: ${q(u)} },`).join('\n');
+  if (src.split('\n];').length !== 2) throw new Error('ancla \\n]; no única');
+  if (fresh.length) writeFileSync(P, src.replace('\n];', '\n' + lines + '\n];'));
+  console.log(`Importados ${fresh.length} anuncios nuevos a ${P} (${rows.length - fresh.length} ya estaban).`);
+}
