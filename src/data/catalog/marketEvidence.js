@@ -1721,6 +1721,8 @@ export const MARKET_OBSERVATIONS = [
   { brand: 'Mercedes-Benz', model: 'Clase C Estate', gen: 'Clase C Estate S205', market: 'ES', kind: 'anuncio', engine: 'C 220 d 194 CV T', year: 2021, km: 140000, price: 24890, source: 'milanuncios API (A Coruña)', url: 'https://www.milanuncios.com/mercedes-benz-de-segunda-mano/mercedes-benz-clase-c-c-220-d-estate-612440486.htm' },
   { brand: 'Mercedes-Benz', model: 'Clase C Estate', gen: 'Clase C Estate S205', market: 'ES', kind: 'anuncio', engine: 'C 220 d 194 CV T', year: 2019, km: 230000, price: 19800, source: 'milanuncios API (Barakaldo)', url: 'https://www.milanuncios.com/mercedes-benz-de-segunda-mano/mercedes-benz-clase-c-c-220-d-estate-613947888.htm' },
   { brand: 'Audi', model: 'Q3', gen: 'Q3 8U', market: 'ES', kind: 'anuncio', engine: '2.0 TDI 150 CV quattro S tronic', year: 2017, km: 120000, price: 18500, source: 'milanuncios API (Bolaños de Calatrava)', url: 'https://www.milanuncios.com/audi-de-segunda-mano/audi-q3-2-0-tdi-110kw-150cv-quattro-s-tr-570207265.htm' },
+  { brand: 'Audi', model: 'Q3', gen: 'Q3 8U', market: 'ES', kind: 'anuncio', engine: '2.0 TDI 150 CV quattro S tronic', year: 2017, km: 212000, price: 16500, source: 'milanuncios API (Alhendín)', url: 'https://www.milanuncios.com/audi-de-segunda-mano/audi-q3-sport-ed-2-0-tdi-110kw150cv-quat-610753095.htm' },
+  { brand: 'Audi', model: 'Q3', gen: 'Q3 8U', market: 'ES', kind: 'anuncio', engine: '2.0 TDI 150 CV quattro', year: 2017, km: 152713, price: 17199, source: 'milanuncios API (Autohero Valencia)', url: 'https://www.milanuncios.com/todoterreno-de-ocasion/audi-q3-design-edition-2-0-tdi-quattro-615951791.htm' },
 ];
 
 // ---------------------------------------------------------------------------
