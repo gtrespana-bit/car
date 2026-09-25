@@ -63,6 +63,9 @@ for (const [k, m] of groups) {
   const est = (buy, sell, regime) => catalogEstimate({ ...v, fuel, cv, years: [Y, Y], dePrice: [buy, buy], esPrice: [sell, sell] }, undefined, new Date(), { regime });
   const d25 = q(de, 0.25), d50 = q(de, 0.5), e25 = q(es, 0.25), e50 = q(es, 0.5);
   const real = est(d25, e50, 'rebu');
+  // Solo milanuncios: misma normalización, venta = mediana de sus anuncios (mín. 3).
+  const mil = m.ES.filter((o) => /milanuncios/i.test(o.source || '')).map((o) => norm(o, 'ES'));
+  const m50 = mil.length >= MIN_ES ? q(mil, 0.5) : null;
   out.push({
     name: `${brand} ${model} (${gen}) ${fuel} ~${cv} CV`, nDE: m.DE.length, nES: m.ES.length, Y, K,
     d25: Math.round(d25), d50: Math.round(d50), e25: Math.round(e25), e50: Math.round(e50),
@@ -71,6 +74,7 @@ for (const [k, m] of groups) {
     pReal: real.profit, pMed: est(d50, e50, 'rebu').profit, pPrud: est(d25, e25, 'rebu').profit,
     pRealPart: est(d25, e50, 'particular').profit,
     roi: real.profit / (d25 + real.expenses),
+    nMil: mil.length, m50, pMil: m50 ? est(d25, m50, 'rebu').profit : null,
   });
 }
 out.sort((a, b) => b.pReal - a.pReal);
@@ -83,8 +87,8 @@ let md = `# Oportunidades de importación medidas con anuncios reales\n\n`;
 md += `Generado por \`node scripts/opportunities.mjs\` sobre ${O.length} anuncios (${O.filter((o) => o.market === 'DE').length} DE / ${O.filter((o) => o.market === 'ES').length} ES).\n`;
 md += `Todos los anuncios de cada grupo se llevan al mismo año y km. Beneficio neto en **REBU** tras transporte, ITV, impuesto de matriculación (según CO₂), DGT, gestoría, preparación, garantía e IVA del margen.\n\n`;
 md += `- **Realista:** compras en el 25 % más barato de Alemania, vendes al precio mediano español.\n- **Medio:** mediana contra mediana.\n- **Prudente:** compras barato y vendes en el 25 % más barato de España (venta rápida).\n\n`;
-md += `| Veredicto | Grupo | Anuncios DE/ES | Año · km | Compra DE (ganga / mediana) | Venta ES (mediana) | ES sobre DE | Realista | Medio | Prudente | Como particular | Rentab. |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n`;
-for (const r of out) md += `| ${verdict(r)} | ${r.name} | ${r.nDE}/${r.nES} | ${r.Y} · ${(r.K / 1000).toFixed(0)}k | ${eur(r.d25)} / ${eur(r.d50)} | ${eur(r.e50)} | ${r.uplift >= 0 ? '+' : ''}${pct(r.uplift)} | **${eur(r.pReal)}** | ${eur(r.pMed)} | ${eur(r.pPrud)} | ${eur(r.pRealPart)} | ${pct(r.roi)} |\n`;
+md += `| Veredicto | Grupo | Anuncios DE/ES | Año · km | Compra DE (ganga / mediana) | Venta ES (mediana) | ES sobre DE | Realista | Medio | Prudente | Como particular | Rentab. | Solo milanuncios (n · venta · realista) |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|\n`;
+for (const r of out) md += `| ${verdict(r)} | ${r.name} | ${r.nDE}/${r.nES} | ${r.Y} · ${(r.K / 1000).toFixed(0)}k | ${eur(r.d25)} / ${eur(r.d50)} | ${eur(r.e50)} | ${r.uplift >= 0 ? '+' : ''}${pct(r.uplift)} | **${eur(r.pReal)}** | ${eur(r.pMed)} | ${eur(r.pPrud)} | ${eur(r.pRealPart)} | ${pct(r.roi)} | ${r.m50 ? `${r.nMil} · ${eur(r.m50)} · **${eur(r.pMil)}**` : `${r.nMil} anuncios (mín. ${MIN_ES})`} |\n`;
 const sum = (f) => out.filter(f).length;
 md += `\n**Resumen:** ${out.length} grupos medidos · 🟢 ${sum((r) => verdict(r).startsWith('🟢'))} · 🟡 ${sum((r) => verdict(r).startsWith('🟡'))} · 🟠 ${sum((r) => verdict(r).startsWith('🟠'))} · 🔴 ${sum((r) => verdict(r).startsWith('🔴'))}\n`;
 console.log(md);
