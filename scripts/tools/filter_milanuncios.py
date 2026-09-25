@@ -55,7 +55,7 @@ def ok(r):
       if any(f'-{w}-' in joined for w in ws):
         return 'carrocería'
   for o in OTHER:
-    if f'-{o}-' in joined and o not in ALLOWED.get(model, set()):
+    if f'-{o}-' in joined and o not in ALLOWED.get(model, set()) and o not in base:
       return 'carrocería'
   return None
 

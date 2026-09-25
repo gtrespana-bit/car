@@ -10,6 +10,7 @@
 // priceFrom/priceTo y limit (hasta 100). Se hace una consulta por grupo y año.
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { MARKET_OBSERVATIONS as O, cvOf, fuelOf } from '../src/data/catalog/marketEvidence.js';
+import { CANDIDATES } from './candidates.mjs';
 
 const API = 'https://searchapi.gw.milanuncios.com/v3/classifieds';
 const FUEL = { 'Diésel': 'diesel', 'Gasolina': 'gasoline', 'Híbrido': 'hybrid', 'Microhíbrido': null, 'Híbrido enchufable': null, 'Eléctrico': 'electric' };
@@ -28,6 +29,12 @@ for (const o of O) {
   g.y0 = Math.min(g.y0, o.year); g.y1 = Math.max(g.y1, o.year);
   groups.set(k, g);
 }
+
+// Modelos nuevos / generaciones antiguas (scripts/candidates.mjs). --new: solo estos.
+if (process.argv.includes('--new')) groups.clear();
+for (const c of CANDIDATES) groups.set(`${c.gen}|${c.fuel}|${c.cv}`, { ...c, cand: true, banRe: c.ban ? new RegExp(c.ban, 'i') : null });
+// Híbridos/eléctricos: la potencia que pone el vendedor no es fiable → sin filtro de CV
+const loose = (g) => /híbrido|eléctrico/i.test(g.fuel) && g.fuel !== 'Microhíbrido';
 
 // La palabra que debe aparecer en el título/descripción para aceptar el anuncio
 const modelWord = (m) => norm(m).replace(/touring sports|estate|variant|avant|combi|touring|serie (\d)/g, (x, d) => d ? `serie ${d}` : '').trim();
@@ -53,9 +60,12 @@ async function get(url) {
 const attr = (ad, k) => ad.attributes?.find((a) => a.field?.raw === k)?.value?.raw ?? null;
 
 const rows = [], seen = new Set(), report = [];
+const only = process.argv.includes('--only') ? norm(process.argv[process.argv.indexOf('--only') + 1]) : null;
 for (const g of groups.values()) {
-  const text = `${g.brand === 'Mercedes-Benz' ? 'mercedes' : norm(g.brand)} ${modelWord(g.model)}`;
+  if (only && !norm(`${g.gen} ${g.fuel} ${g.cv}`).includes(only)) continue;
+  const text = `${g.brand === 'Mercedes-Benz' ? 'mercedes' : norm(g.brand)} ${g.cand ? g.word : modelWord(g.model)}`;
   const p = new URLSearchParams({ text, category: '13', limit: String(LIMIT), yearFrom: g.y0, yearTo: g.y1, hpFrom: g.cv - HP_TOL, hpTo: g.cv + HP_TOL, priceFrom: 4000 });
+  if (loose(g)) { p.delete('hpFrom'); p.delete('hpTo'); }
   if (FUEL[g.fuel]) p.set('fuel', FUEL[g.fuel]);
   let n = 0, total = 0;
   for (let year = g.y0; year <= g.y1; year++) {
@@ -70,11 +80,16 @@ for (const g of groups.values()) {
       const year = +attr(ad, 'year'), km = +attr(ad, 'kilometers'), hp = +attr(ad, 'hp');
       const price = ad.price?.cash?.value;
       if (!norm(ad.title + ' ' + ad.url).includes(norm(g.brand).split('-')[0])) continue; // otra marca
-      if (!norm(title).includes(modelWord(g.model).split(' ').pop())) continue;       // otro modelo
-      if (!bodyOk(g, title)) continue;                                                   // carrocería distinta
+      if (g.cand) {
+        if (!norm(title).includes(norm(g.word))) continue;                               // otro modelo
+        if (g.banRe && g.banRe.test(norm(title))) continue;                              // otra versión
+      } else {
+        if (!norm(title).includes(modelWord(g.model).split(' ').pop())) continue;       // otro modelo
+        if (!bodyOk(g, title)) continue;                                                   // carrocería distinta
+      }
       if (g.fuel === 'Microhíbrido' && !/48v|mhev|mild|microh|hibrid/.test(norm(title))) continue;
       if (!(year >= g.y0 && year <= g.y1 && km > 1000 && km < 400000 && price > 4000)) continue;
-      if (Math.abs(hp - g.cv) > HP_TOL) continue;
+      if (!loose(g) && Math.abs(hp - g.cv) > HP_TOL) continue;
       if (/canarias|tenerife|las palmas/.test(norm(ad.location?.province?.name))) continue; // IGIC
       rows.push([g.brand, g.model, g.gen, 'ES', g.engine, year, km, price,
         `milanuncios API (${ad.location?.city?.name || ad.location?.province?.name}${ad.type === 'private' ? ', particular' : ''})`,

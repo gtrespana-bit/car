@@ -6,6 +6,7 @@ import { MARKET_OBSERVATIONS as O, cvOf, fuelOf } from '../src/data/catalog/mark
 import { priceFit } from '../src/data/catalog/priceModel.js';
 import { catalogEstimate } from '../src/domain/catalogEstimate.js';
 import { GENERATED_DB } from '../src/data/catalog/index.js';
+import { CANDIDATES } from './candidates.mjs';
 
 const q = (a, p) => { const s = [...a].sort((x, y) => x - y); const i = (s.length - 1) * p; const l = Math.floor(i); return s[l] + (s[Math.min(l + 1, s.length - 1)] - s[l]) * (i - l); };
 const F = { DE: priceFit('DE'), ES: priceFit('ES') };
@@ -58,9 +59,12 @@ for (const [k, m] of groups) {
   const de = m.DE.map((o) => norm(o, 'DE')); const es = m.ES.map((o) => norm(o, 'ES'));
   const cvs = all.map(cvOf);
   const cv = Math.round(q(cvs, 0.5));
-  const v = GENERATED_DB.filter((x) => x.brand === brand && x.model === model && x.gen === gen && x.fuel === fuel)
+  let v = GENERATED_DB.filter((x) => x.brand === brand && x.model === model && x.gen === gen && x.fuel === fuel)
     .sort((a, b) => Math.abs(a.cv - cv) - Math.abs(b.cv - cv))[0]
     || GENERATED_DB.find((x) => x.brand === brand && x.model === model && x.gen === gen) || {};
+  // Modelos nuevos: CO₂ y precio nuevo aproximados de candidates.mjs (para el impuesto de matriculación)
+  const cand = CANDIDATES.find((c) => c.gen === gen && c.fuel === fuel);
+  if (cand) v = { ...v, co2: cand.co2, newPrice: cand.newPrice, fuel };
   const est = (buy, sell, regime) => catalogEstimate({ ...v, fuel, cv, years: [Y, Y], dePrice: [buy, buy], esPrice: [sell, sell] }, undefined, new Date(), { regime });
   const d25 = q(de, 0.25), d50 = q(de, 0.5), e25 = q(es, 0.25), e50 = q(es, 0.5);
   const real = est(d25, e50, 'rebu');

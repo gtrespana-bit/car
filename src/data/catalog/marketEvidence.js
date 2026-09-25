@@ -21626,6 +21626,7 @@ export const fuelOf = (obs) => {
   // El orden importa: el enchufable y el microhíbrido se detectan antes que el
   // híbrido genérico, porque sus nombres también contienen «hybrid».
   if (/plug-?in|phev/.test(t)) return 'Híbrido enchufable';
+  if (/eléctrico|electrico|\belectric\b|\bbev\b/.test(t)) return 'Eléctrico';
   // Un mild-hybrid (48 V) sigue siendo de combustible: en el catálogo se
   // clasifica aparte porque su precio de reventa no es el del híbrido completo.
   if (/\b48v\b|mild[- ]?hyb|mhev|microhíbrido|microhibrido/.test(t)) return 'Microhíbrido';

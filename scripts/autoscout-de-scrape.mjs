@@ -12,6 +12,7 @@
 // (20 anuncios por página, hasta 20 páginas por búsqueda; se busca año a año).
 import { writeFileSync, mkdirSync, readFileSync, appendFileSync, existsSync } from 'node:fs';
 import { MARKET_OBSERVATIONS as O, cvOf, fuelOf } from '../src/data/catalog/marketEvidence.js';
+import { CANDIDATES } from './candidates.mjs';
 
 // generación del catálogo → [marca, modelo en autoscout, carrocería]
 // body: 5 = Kombi, 6 = Limousine, null = cualquiera (se filtra por título)
@@ -50,8 +51,10 @@ const BAN = {
   'Tiguan II': /allspace/i, 'Caddy 5': /maxi|cargo|kasten/i, 'Superb III': /combi|kombi/i,
   'Serie 1 F20 LCI': /f40|118d.*2020|m135/i, 'Serie 1 F40': /f20/i,
 };
-const FUEL = { 'Diésel': 'D', 'Gasolina': 'B', 'Híbrido': '2' }; // Microhíbrido: sin filtro, se filtra por kW
+const FUEL = { 'Diésel': 'D', 'Gasolina': 'B', 'Híbrido': '2', 'Híbrido enchufable': '2', 'Eléctrico': 'E' }; // Microhíbrido: sin filtro, se filtra por kW
 const kw = (cv) => Math.round(cv * 0.7355);
+// Híbridos/eléctricos: la potencia anunciada varía (motor térmico vs. sistema) → margen amplio
+const tol = (g) => (/híbrido|eléctrico/i.test(g.fuel) && g.fuel !== 'Microhíbrido' ? 25 : 4);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const only = process.argv.includes('--only') ? process.argv[process.argv.indexOf('--only') + 1].toLowerCase() : null;
 
@@ -66,6 +69,14 @@ for (const o of O) {
   const g = groups.get(k) || { brand: o.brand, model: o.model, gen: o.gen, fuel, cv: c5, y0: 9999, y1: 0, engine: o.engine, n: 0 };
   g.y0 = Math.min(g.y0, o.year); g.y1 = Math.max(g.y1, o.year); g.n++;
   groups.set(k, g);
+}
+
+// Modelos nuevos / generaciones antiguas (scripts/candidates.mjs). --new: solo estos.
+if (process.argv.includes('--new')) groups.clear();
+for (const c of CANDIDATES) {
+  SLUG[c.gen] = c.as;
+  if (c.ban) BAN[c.gen] = new RegExp(c.ban, 'i');
+  groups.set(`${c.gen}|${c.fuel}|${c.cv}`, { brand: c.brand, model: c.model, gen: c.gen, fuel: c.fuel, cv: c.cv, y0: c.y0, y1: c.y1, engine: c.engine, n: 1000 });
 }
 
 if (process.argv.includes('--list')) { for (const g of groups.values()) console.log(g.gen, g.fuel, g.cv, g.y0, g.y1, g.n); process.exit(0); }
@@ -124,7 +135,7 @@ async function runGroup(g) {
   for (let year = g.y0; year <= g.y1; year++) {
     for (let p = 1; p <= PAGES; p++) {
       const q = new URLSearchParams({ atype: 'C', cy: 'D', ustate: 'N,U', sort: 'standard', desc: '0', fregfrom: year, fregto: year,
-        powerfrom: kw(g.cv) - 4, powerto: kw(g.cv) + 4, powertype: 'kw', page: p });
+        powerfrom: kw(g.cv) - tol(g), powerto: kw(g.cv) + tol(g), powertype: 'kw', page: p });
       if (FUEL[g.fuel]) q.set('fuel', FUEL[g.fuel]);
       if (body) q.set('body', body);
       const j = await page(`https://www.autoscout24.de/lst/${make}/${model}?${q}`);
@@ -143,7 +154,7 @@ async function runGroup(g) {
         seen.add(a.id); fresh++;
         if (!a.url || !a.price || !a.km || !a.year || a.country !== 'DE') continue;
         if (!(a.year >= g.y0 && a.year <= g.y1 && a.km > 1000 && a.km < 350000 && a.price > 3000 && a.price < 150000)) continue;
-        if (a.kw && Math.abs(a.kw - kw(g.cv)) > 4) continue;
+        if (a.kw && Math.abs(a.kw - kw(g.cv)) > tol(g)) continue;
         if (BAN[g.gen] && BAN[g.gen].test(a.title)) continue;
         if (g.fuel === 'Microhíbrido' && /diesel/i.test(a.fuelTxt)) continue;
         mine.push([g.brand, g.model, g.gen, 'DE', g.engine, a.year, a.km, a.price, `autoscout24.de (${a.city}${a.priv ? ', particular' : ''})`, a.url]);
