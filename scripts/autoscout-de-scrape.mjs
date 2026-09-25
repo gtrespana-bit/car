@@ -6,10 +6,11 @@
 //   node scripts/autoscout-de-scrape.mjs --import   → además los añade a marketEvidence.js
 //   node scripts/autoscout-de-scrape.mjs --only "Clase E"   → solo grupos cuyo nombre contenga eso
 //
-// Necesita conexión normal a internet (tu PC). Tarda ~30-60 min (va despacio a propósito).
+// Necesita conexión normal a internet (tu PC). Tarda ~10-15 min (4 búsquedas a la vez).
+// Si se corta, vuelve a lanzarlo: sigue donde iba (data/autoscout/progress.jsonl). --reset empieza de cero.
 // Lee el JSON __NEXT_DATA__ que la propia web incluye en cada página de resultados
 // (20 anuncios por página, hasta 20 páginas por búsqueda; se busca año a año).
-import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync, appendFileSync, existsSync } from 'node:fs';
 import { MARKET_OBSERVATIONS as O, cvOf, fuelOf } from '../src/data/catalog/marketEvidence.js';
 
 // generación del catálogo → [marca, modelo en autoscout, carrocería]
@@ -107,22 +108,28 @@ function parse(l) {
 const rows = [], seen = new Set(), report = [];
 mkdirSync('data/autoscout', { recursive: true });
 let debugSaved = false;
-for (const g of groups.values()) {
+// Progreso: cada grupo terminado se guarda al momento; si se corta, al relanzar sigue donde iba.
+const PROG = 'data/autoscout/progress.jsonl';
+const done = new Map();
+if (existsSync(PROG) && !process.argv.includes('--reset')) {
+  for (const line of readFileSync(PROG, 'utf8').split('\n').filter(Boolean)) { const d = JSON.parse(line); done.set(d.name, d); }
+}
+const PAUSE = 400, PAGES = 8, PARALLEL = 4; // 8 páginas × 20 = hasta 160 anuncios por año y grupo
+
+async function runGroup(g) {
   const name = `${g.gen} · ${g.fuel} ${g.cv} CV · ${g.y0}-${g.y1}`;
-  if (only && !name.toLowerCase().includes(only)) continue;
+  if (done.has(name)) { const d = done.get(name); d.rows.forEach((r) => rows.push(r)); report.push(d.line); return; }
   const [make, model, body] = SLUG[g.gen];
-  let n = 0, total = 0;
-  const y0 = Math.max(g.y0 - 1, 2014), y1 = Math.min(g.y1 + 1, 2026); // ±1 año: mismo coche, más muestra
-  for (let year = y0; year <= y1; year++) {
-    for (let p = 1; p <= 20; p++) {
+  let n = 0, total = 0; const mine = [];
+  for (let year = g.y0; year <= g.y1; year++) {
+    for (let p = 1; p <= PAGES; p++) {
       const q = new URLSearchParams({ atype: 'C', cy: 'D', ustate: 'N,U', sort: 'standard', desc: '0', fregfrom: year, fregto: year,
         powerfrom: kw(g.cv) - 4, powerto: kw(g.cv) + 4, powertype: 'kw', page: p });
       if (FUEL[g.fuel]) q.set('fuel', FUEL[g.fuel]);
       if (body) q.set('body', body);
-      const url = `https://www.autoscout24.de/lst/${make}/${model}?${q}`;
-      const j = await page(url);
+      const j = await page(`https://www.autoscout24.de/lst/${make}/${model}?${q}`);
       if (j.error) {
-        report.push(`${name} ${year} p${p}: error ${j.error}`); console.log(report.at(-1));
+        console.log(`${name} ${year} p${p}: error ${j.error}`);
         if (j.html && !debugSaved) { writeFileSync('data/autoscout/debug.html', j.html); debugSaved = true; }
         break;
       }
@@ -134,24 +141,27 @@ for (const g of groups.values()) {
         const a = parse(l);
         if (!a.id || seen.has(a.id)) continue;
         seen.add(a.id); fresh++;
-        if (!a.url || !a.price || !a.km || !a.year) continue;
-        if (a.country !== 'DE') continue;
-        if (!(a.year >= y0 && a.year <= y1 && a.km > 1000 && a.km < 350000 && a.price > 3000 && a.price < 150000)) continue;
+        if (!a.url || !a.price || !a.km || !a.year || a.country !== 'DE') continue;
+        if (!(a.year >= g.y0 && a.year <= g.y1 && a.km > 1000 && a.km < 350000 && a.price > 3000 && a.price < 150000)) continue;
         if (a.kw && Math.abs(a.kw - kw(g.cv)) > 4) continue;
         if (BAN[g.gen] && BAN[g.gen].test(a.title)) continue;
         if (g.fuel === 'Microhíbrido' && /diesel/i.test(a.fuelTxt)) continue;
-        rows.push([g.brand, g.model, g.gen, 'DE', g.engine, a.year, a.km, a.price,
-          `autoscout24.de (${a.city}${a.priv ? ', particular' : ''})`, a.url]);
+        mine.push([g.brand, g.model, g.gen, 'DE', g.engine, a.year, a.km, a.price, `autoscout24.de (${a.city}${a.priv ? ', particular' : ''})`, a.url]);
         n++;
       }
       if (j.listings.length < 20 || !fresh) break;
-      await sleep(1200);
+      await sleep(PAUSE);
     }
-    await sleep(1200);
   }
-  report.push(`${name}: ${n} válidos (autoscout decía ${total} en total)`);
-  console.log(report.at(-1));
+  const line = `${name}: ${n} válidos (autoscout decía ${total} en total)`;
+  mine.forEach((r) => rows.push(r)); report.push(line);
+  appendFileSync(PROG, JSON.stringify({ name, line, rows: mine }) + '\n');
+  console.log(`[${report.length}/${groups.size}] ${line}`);
 }
+
+// Primero los grupos con más anuncios (los modelos que más importan); 4 a la vez.
+const queue = [...groups.values()].filter((g) => !only || `${g.gen} · ${g.fuel} ${g.cv} CV`.toLowerCase().includes(only)).sort((a, b) => b.n - a.n);
+await Promise.all(Array.from({ length: PARALLEL }, async () => { while (queue.length) await runGroup(queue.shift()); }));
 
 // Anuncios con precio absurdo para su grupo (errores, "precio a consultar", siniestros)
 const byGen = {};
