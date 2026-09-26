@@ -92,16 +92,20 @@ const UA = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKi
 async function get(url, json) {
   for (let i = 0; i < 4; i++) {
     try {
-      const r = await fetch(url, { headers: UA });
+      const t0 = Date.now();
+      const r = await fetch(url, { headers: UA, signal: AbortSignal.timeout(25000) });
+      const secs = ((Date.now() - t0) / 1000).toFixed(1);
+      if (process.argv.includes('--ver') || secs > 5) console.log(`  petición ${secs} s · estado ${r.status} · ${url.slice(0, 90)}`);
       if (r.status === 429 || r.status >= 500) { blocked++; console.log(`  mobile.de pide esperar (${r.status}), reintento en ${5 * (i + 1)} s`); await sleep(5000 * (i + 1)); continue; }
       if (!r.ok) return { error: r.status, html: await r.text().catch(() => '') };
       return json ? { data: await r.json() } : { html: await r.text() };
-    } catch (e) { await sleep(3000); }
+    } catch (e) { console.log(`  fallo de red (${e.name === 'TimeoutError' ? 'mobile.de no responde en 25 s' : e.message}), reintento`); await sleep(3000); }
   }
   return { error: 'red' };
 }
 
 // 2) Ids de marca/modelo de mobile.de (su propio servicio público)
+console.log('mobile.de scraper v3 (búsqueda única por grupo, hilos=' + (arg('--hilos') ?? 3) + ')');
 const makes = (await get('https://m.mobile.de/svc/r/makes/Car', true)).data?.makes || [];
 if (!makes.length) { console.log('No se pudo leer la lista de marcas de mobile.de (¿bloqueo?).'); process.exit(1); }
 const modelCache = {};
