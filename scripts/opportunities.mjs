@@ -4,7 +4,17 @@
 // beneficio neto con los gastos reales de importación.
 import { MARKET_OBSERVATIONS, cvOf, fuelOf } from '../src/data/catalog/marketEvidence.js';
 import { CANDIDATE_OBSERVATIONS } from '../src/data/catalog/candidateEvidence.js';
-const O = [...MARKET_OBSERVATIONS, ...CANDIDATE_OBSERVATIONS];
+import { existsSync, readFileSync } from 'node:fs';
+// mobile.de (data/mobilede/rows.json, capturado con scripts/mobilede-scrape.mjs): el mayor portal alemán.
+// Se quitan los que ya estaban por autoscout (mismo modelo, año, km y precio).
+const BASE = [...MARKET_OBSERVATIONS, ...CANDIDATE_OBSERVATIONS];
+const dupKey = (o) => [o.gen, o.year, o.km, o.price].join('|');
+const have = new Set(BASE.filter((o) => o.market === 'DE').map(dupKey));
+const MOBILE = (process.argv.includes('--sin-mobile') || !existsSync('data/mobilede/rows.json')) ? [] :
+  JSON.parse(readFileSync('data/mobilede/rows.json', 'utf8'))
+    .map(([brand, model, gen, market, engine, year, km, price, source, url]) => ({ brand, model, gen, market, kind: 'anuncio', engine, year, km, price, source, url }))
+    .filter((o) => !have.has(dupKey(o)) && (have.add(dupKey(o)), true));
+const O = [...BASE, ...MOBILE];
 import { priceFit } from '../src/data/catalog/priceModel.js';
 import { catalogEstimate } from '../src/domain/catalogEstimate.js';
 import { GENERATED_DB } from '../src/data/catalog/index.js';
