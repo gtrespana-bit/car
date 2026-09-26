@@ -88,7 +88,11 @@ for (const [k, m] of groups) {
   // Solo milanuncios + wallapop: misma normalización, venta = mediana (mín. MIN_MIL anuncios).
   const mil = m.ES.filter((o) => /milanuncios|wallapop/i.test(o.source || '')).map((o) => norm(o, 'ES'));
   const m50 = mil.length >= MIN_MIL ? q(mil, 0.5) : null;
+  const pick = (rows, mk, lo, hi) => { const a = rows.map((o) => ({ o, n: norm(o, mk) })).filter((x) => x.o.url).sort((x, y) => x.n - y.n); return a.slice(Math.floor(a.length * lo), Math.max(Math.floor(a.length * lo) + 1, Math.ceil(a.length * hi))).slice(0, 6).map(({ o }) => ({ y: o.year, km: o.km, p: o.price, src: (o.source || '').replace(/\s*\(.*/, ''), url: o.url })); };
   out.push({
+    brand, model, gen, fuel, cv,
+    adsDE: pick(m.DE, 'DE', 0.05, 0.15), adsES: pick(m.ES, 'ES', 0.4, 0.6),
+    cost: [...emp.lines.map((l) => [l.label, l.amount]), ['IVA del margen (REBU)', emp.vat]], sellNet: emp.sell,
     name: `${brand} ${model} (${gen}) ${fuel} ~${cv} CV`, nDE: m.DE.length, nES: m.ES.length, Y, K,
     d25: Math.round(d25), d50: Math.round(d50), e25: Math.round(e25), e50: Math.round(e50),
     uplift: e50 / d50 - 1,
@@ -115,3 +119,6 @@ for (const r of out) md += `| ${verdict(r)} | ${r.name} | ${r.nDE}/${r.nES} | ${
 const sum = (f) => out.filter(f).length;
 md += `\n**Resumen:** ${out.length} grupos medidos · 🟢 ${sum((r) => verdict(r).startsWith('🟢'))} · 🟡 ${sum((r) => verdict(r).startsWith('🟡'))} · 🟠 ${sum((r) => verdict(r).startsWith('🟠'))} · 🔴 ${sum((r) => verdict(r).startsWith('🔴'))}\n`;
 console.log(md);
+// Datos para la app (vista «Oportunidades»): mismo cálculo, sin repetirlo en el navegador.
+import('node:fs').then(({ writeFileSync }) => writeFileSync('src/data/catalog/empresaRanking.js',
+  `// GENERADO por scripts/opportunities.mjs — no editar a mano.\nexport const EMPRESA_META = ${JSON.stringify({ at: new Date().toISOString().slice(0, 10), nDE: O.filter((o) => o.market === 'DE').length, nES: O.filter((o) => o.market === 'ES').length, neg: NEG })};\nexport const EMPRESA_RANKING = ${JSON.stringify(out.map((r) => ({ ...r, verdict: verdict(r), expenses: Math.round(r.expenses) })))};\n`));
