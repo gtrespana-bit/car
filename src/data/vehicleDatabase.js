@@ -27,6 +27,7 @@ const V = (o) => ({
 
 import R, { RELIABILITY_LEVELS } from './catalog/reliability.js';
 import { GENERATED_DB } from './catalog/index.js';
+import { normalizeKm } from './catalog/marketEvidence.js';
 
 export { R as RELIABILITY_NOTES, RELIABILITY_LEVELS };
 
@@ -163,7 +164,47 @@ export const CURATED_DB = [
 //  BASE DE DATOS COMPLETA = ficha curada (precios verificados a mano) +
 //  catálogo ampliado generado desde los datos de homologación.
 // ---------------------------------------------------------------------------
-export const VEHICLE_DB = [...CURATED_DB, ...GENERATED_DB];
+/**
+ * Kilometraje al que se refieren las horquillas de las fichas curadas:
+ * el propio fichero declara "un ejemplar de 4-6 años y 80-120k km".
+ */
+export const CURATED_KM_REF = 110000;
+
+const midYear = (y) => (Number(y?.[0]) + Number(y?.[1] ?? y?.[0])) / 2;
+
+/**
+ * Las fichas curadas tenían los precios escritos a mano, y eso provocaba que
+ * el MISMO coche saliera con dos precios distintos según en qué lista cayera.
+ * Ahora heredan la horquilla del catálogo (que es la que se contrasta con
+ * anuncios reales en marketEvidence.js), llevada a su propio kilometraje.
+ * Las que no tienen equivalente en el catálogo conservan su cifra manual, pero
+ * marcada como 'manual' para que se vea que no está contrastada.
+ */
+function reconcileWithCatalog(list) {
+  return list.map((c) => {
+    const twins = GENERATED_DB.filter((g) => g.brand === c.brand
+      && (String(g.model).includes(String(c.model).split(" ")[0]) || String(c.model).includes(String(g.model).split(" ")[0]))
+      && g.cv === c.cv
+      && Math.abs(midYear(g.years) - midYear(c.years)) <= 1);
+    if (!twins.length) return { ...c, priceSource: { de: "manual", es: "manual", kmRef: CURATED_KM_REF } };
+    // Se prefiere la ficha generada que tenga anuncios reales detrás.
+    const rank = (g) => (g.priceSource.de === "evidencia" || g.priceSource.es === "evidencia" ? 0 : 1);
+    const twin = [...twins].sort((a, b) => rank(a) - rank(b))[0];
+    const scale = normalizeKm(1, twin.kmRef, CURATED_KM_REF);
+    const adjust = (r) => [Math.round((r[0] * scale) / 50) * 50, Math.round((r[1] * scale) / 50) * 50];
+    return {
+      ...c,
+      dePrice: adjust(twin.dePrice),
+      esPrice: adjust(twin.esPrice),
+      priceSource: { ...twin.priceSource, kmRef: CURATED_KM_REF, reconciledFrom: twin.id },
+    };
+  });
+}
+
+export const CURATED_RECONCILED = reconcileWithCatalog(CURATED_DB);
+
+export const VEHICLE_DB = [...CURATED_RECONCILED, ...GENERATED_DB]
+  .filter((v) => !['Seat', 'Cupra'].includes(v.brand)); // fabricadas en España: no compensa importarlas
 export const CURATED_COUNT = CURATED_DB.length;
 export const GENERATED_COUNT = GENERATED_DB.length;
 

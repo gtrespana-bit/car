@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import {
-  Gauge, Car, Database, Calculator, Users, Wallet, FileWarning, FileCheck2, BarChart3,
+  Gauge, TrendingUp, Car, Database, Calculator, Users, Wallet, FileWarning, FileCheck2, BarChart3,
   BookOpen, Settings as SettingsIcon, Menu, X, Building2, HardDrive, MapPin, ShieldCheck,
   ReceiptText, Cloud, CloudOff, LogOut, UserRound, Upload,
 } from 'lucide-react';
@@ -15,6 +15,7 @@ import { fleetSummary, isSold } from './domain/finance.js';
 import DashboardView from './views/DashboardView.jsx';
 import FleetView from './views/FleetView.jsx';
 import CatalogView from './views/CatalogView.jsx';
+import OpportunitiesView from './views/OpportunitiesView.jsx';
 import ImportSimulatorView from './views/ImportSimulatorView.jsx';
 import CrmView from './views/CrmView.jsx';
 import AccountingView from './views/AccountingView.jsx';
@@ -29,6 +30,7 @@ const NAV = [
   { group: 'Operativa', items: [
     { id: 'dashboard', label: 'Cuadro de mando', icon: Gauge },
     { id: 'fleet', label: 'Flota y stock', icon: Car },
+    { id: 'opportunities', label: 'Oportunidades', icon: TrendingUp },
     { id: 'catalog', label: 'Catálogo', icon: Database },
     { id: 'simulator', label: 'Simulador', icon: Calculator },
     { id: 'crm', label: 'Clientes y ventas', icon: Users },
@@ -192,6 +194,7 @@ function Shell() {
           )}
           {view === 'dashboard' && <DashboardView go={go} editVehicle={editVehicle} />}
           {view === 'fleet' && <FleetView autoOpenId={openVehicleId} onAutoOpened={() => setOpenVehicleId(null)} />}
+          {view === 'opportunities' && <OpportunitiesView />}
           {view === 'catalog' && <CatalogView onSimulate={openSimulator} />}
           {view === 'simulator' && <ImportSimulatorView key={simSeed ? simSeed.at : 'sim'} seed={simSeed} />}
           {view === 'crm' && <CrmView vehicles={state.vehicles} editVehicle={editVehicle} />}

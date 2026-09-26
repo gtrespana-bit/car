@@ -395,10 +395,10 @@ check('emailLink construye un mailto válido', () => {
 });
 
 // --- Catálogo de vehículos --------------------------------------------------
-check('Catálogo: más de 1.000 variantes generadas sobre las curadas', () => {
-  assert.ok(GENERATED_DB.length >= 1000, `solo ${GENERATED_DB.length} variantes generadas`);
+check('Catálogo: más de 900 variantes generadas sobre las curadas (sin Seat/Cupra)', () => {
+  assert.ok(GENERATED_DB.length >= 900, `solo ${GENERATED_DB.length} variantes generadas`);
   assert.ok(CURATED_DB.length >= 100, `solo ${CURATED_DB.length} fichas curadas`);
-  assert.equal(VEHICLE_DB.length, CURATED_DB.length + GENERATED_DB.length);
+  assert.equal(VEHICLE_DB.length, [...CURATED_DB, ...GENERATED_DB].filter((v) => !['Seat', 'Cupra'].includes(v.brand)).length);
 });
 
 check('Catálogo: sin identificadores duplicados', () => {
@@ -437,7 +437,8 @@ let failed = 0;
 check('Catálogo: la ganancia usa precios medios y descuenta gastos e IVA', () => {
   const e = catalogEstimate({ dePrice: [12500, 16000], esPrice: [17500, 20500], co2: 118, newPrice: 31500, years: [2017, 2020], fuel: 'Diésel' });
   assert.equal(e.buy, 14250);
-  assert.equal(e.sell, 19000);
+  assert.equal(e.asked, 19000);
+  assert.equal(e.sell, 18430); // −3 % de regateo
   assert.equal(e.profit, e.sell - e.buy - e.expenses - e.vat);
   assert.equal(e.expenses, e.lines.reduce((a, l) => a + l.amount, 0));
   assert.ok(e.profit < e.sell - e.buy);

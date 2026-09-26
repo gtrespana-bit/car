@@ -5,15 +5,45 @@ import { useStore } from '../lib/store.jsx';
 import { eur, eur0, numEs, todayISO, download, toCsv } from '../lib/format.js';
 import { catalogEstimate, profitLevel } from '../domain/catalogEstimate.js';
 import { VEHICLE_DB, RELIABILITY_META, CURATED_COUNT, searchVehicles } from '../data/vehicleDatabase.js';
+import { EVIDENCE_CAPTURED_AT, MARKET_OBSERVATIONS } from '../data/catalog/marketEvidence.js';
+import { calibrationFactors } from '../data/catalog/index.js';
 
 const REL_ORDER = { gold: 0, ok: 1, warn: 2, banned: 3 };
 
+/** De dónde sale cada horquilla, en lenguaje claro. */
+const PRICE_ORIGIN = {
+  regresion: { label: 'Ajustado a anuncios (año, motor y combustible)', tone: 'emerald' },
+  evidencia: { label: 'Contrastado con anuncios', tone: 'emerald' },
+  evidencia_generacion: { label: 'Anuncios de la generación', tone: 'sky' },
+  modelo: { label: 'Estimación del modelo', tone: 'amber' },
+  manual: { label: 'Sin contrastar', tone: 'rose' },
+};
+
+/** Pie explicativo de cada horquilla: origen, nº de anuncios y km de referencia. */
+function priceHint(v, market) {
+  const src = v.priceSource?.[market];
+  if (!src) return undefined;
+  const meta = PRICE_ORIGIN[src] || PRICE_ORIGIN.modelo;
+  const ev = market === 'de' ? v.priceSource?.deEvidence : v.priceSource?.esEvidence;
+  const km = v.kmRef ? ` a ${(v.kmRef / 1000).toFixed(0)}k km` : '';
+  if (src === 'regresion') {
+    const r = v.priceSource?.regression?.[market.toUpperCase()];
+    return `${meta.label}: ${r?.n ?? 0} anuncios, R² ${r?.r2 ?? '—'} · ${EVIDENCE_CAPTURED_AT}`;
+  }
+  if (src === 'evidencia' || src === 'evidencia_generacion') return `${meta.label}: ${ev?.n ?? 0} anuncio(s)${km} · ${EVIDENCE_CAPTURED_AT}`;
+  if (src === 'manual') return 'Cifra manual, sin anuncios que la respalden';
+  return `${meta.label}${km} (sin anuncios verificados de esta versión)`;
+}
+
 export default function CatalogView({ onSimulate }) {
-  const { saveVehicle, toast, tariffs } = useStore();
+  const { saveVehicle, toast, tariffs, company } = useStore();
+  // Fase 1 se opera como particular (sin IVA en la venta, IRPF sobre la
+  // ganancia). Se puede cambiar aquí mismo para ver las cuentas de la Fase 2.
+  const [regime, setRegime] = useState(company?.vatRegime === 'general' ? 'general' : 'particular');
   const est = useMemo(() => {
     const m = new Map();
-    return (v) => { if (!m.has(v.id)) m.set(v.id, catalogEstimate(v, tariffs)); return m.get(v.id); };
-  }, [tariffs]);
+    return (v) => { if (!m.has(v.id)) m.set(v.id, catalogEstimate(v, tariffs, new Date(), { regime })); return m.get(v.id); };
+  }, [tariffs, regime]);
   const profitOf = (v) => est(v)?.profit ?? -1e9;
   const [q, setQ] = useState('');
   const [brand, setBrand] = useState('');
@@ -25,6 +55,14 @@ export default function CatalogView({ onSimulate }) {
   const [sort, setSort] = useState('relevancia');
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState(null);
+  const coverage = useMemo(() => ({
+    regresion: VEHICLE_DB.filter((v) => v.priceSource?.de === 'regresion' || v.priceSource?.es === 'regresion').length,
+    evidencia: VEHICLE_DB.filter((v) => v.priceSource?.de === 'evidencia' || v.priceSource?.es === 'evidencia').length,
+    generacion: VEHICLE_DB.filter((v) => v.priceSource && ['evidencia_generacion'].includes(v.priceSource.de)).length,
+    modelo: VEHICLE_DB.filter((v) => v.priceSource?.de === 'modelo').length,
+    obs: MARKET_OBSERVATIONS.length,
+  }), []);
+  const calib = useMemo(() => ({ DE: calibrationFactors().DE.toFixed(3), ES: calibrationFactors().ES.toFixed(3) }), []);
 
   const PER_PAGE = 25;
 
@@ -144,12 +182,20 @@ export default function CatalogView({ onSimulate }) {
       <SectionTitle
         icon={Database}
         title="Catálogo de vehículos"
-        subtitle={`${VEHICLE_DB.length.toLocaleString('es-ES')} variantes de ${brands.length} marcas (${CURATED_COUNT} fichas revisadas a mano + el resto generadas por modelo de depreciación) con fiabilidad de motor, precio de compra en Alemania y precio de venta en Galicia.`}
+        subtitle={`${VEHICLE_DB.length.toLocaleString('es-ES')} variantes de ${brands.length} marcas con fiabilidad de motor, precio de compra en Alemania y precio de venta en Galicia. Cada ficha indica de dónde sale su precio.`}
         right={<Button variant="secondary" icon={Download} onClick={exportCsv}>Exportar CSV</Button>}
       />
 
       <Alert tone="warn">
-        Las horquillas de precio son una <b>estimación de mercado</b> obtenida aplicando la curva de depreciación al precio medio del vehículo nuevo: sirven para decidir rápido si una operación es interesante, pero nunca sustituyen a la comprobación en Mobile.de, AutoScout24 o la tabla oficial de Hacienda.
+        <b>Cómo leer los precios.</b> Todas las horquillas están expresadas al <b>kilometraje de referencia</b> de cada
+        generación (se indica en la ficha), no al km del coche que tengas delante. Su origen se declara en cada caso:
+        {' '}<b>ajustado a anuncios</b> ({coverage.regresion} variantes, por regresión sobre {coverage.obs} anuncios
+        reales de Mobile.de, AutoScout24, coches.net, Autocasión, Milanuncios y Kleinanzeigen capturados
+        el {EVIDENCE_CAPTURED_AT}, usando año, motor y km), <b>contrastado directamente</b> ({coverage.evidencia}),
+        {' '}<b>extrapolado de su generación</b> ({coverage.generacion}) o <b>estimado por el modelo</b> ({coverage.modelo}).
+        La auditoría <code>npm run prices:check</code> reproduce los {coverage.obs} anuncios uno a uno: error mediano
+        del 5,5 % y 9 de cada 10 por debajo del 16 %. Aun así, el acabado, el estado y el km real mandan:
+        comprueba siempre el coche concreto antes de pagar.
       </Alert>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
@@ -167,6 +213,15 @@ export default function CatalogView({ onSimulate }) {
           <Select value={segment} onChange={(v) => { setSegment(v); setPage(0); }} placeholder="Todos los segmentos" options={segments} />
           <Select value={fuel} onChange={(v) => { setFuel(v); setPage(0); }} placeholder="Todos los combustibles" options={fuels} />
           <Select value={rel} onChange={(v) => { setRel(v); setPage(0); }} placeholder="Toda fiabilidad" options={Object.entries(RELIABILITY_META).map(([k, m]) => ({ value: k, label: m.label }))} />
+          <Select
+            value={regime}
+            onChange={setRegime}
+            options={[
+              { value: 'particular', label: 'Ganancia: como particular (IRPF)' },
+              { value: 'rebu', label: 'Ganancia: REBU (IVA del margen)' },
+              { value: 'general', label: 'Ganancia: régimen general (IVA 21 %)' },
+            ]}
+          />
           <Select
             value={sort}
             onChange={setSort}
@@ -240,8 +295,16 @@ export default function CatalogView({ onSimulate }) {
                 { label: 'Etiqueta DGT', value: detail.badge || 'Sin etiqueta' },
                 { label: 'Cambio', value: detail.transmission || '—' },
                 { label: 'Precio nuevo (tablas)', value: detail.newPrice ? eur0(detail.newPrice) : '—' },
-                { label: 'Compra Alemania', value: detail.dePrice ? `${eur0(detail.dePrice[0])} – ${eur0(detail.dePrice[1])}` : '—' },
-                { label: 'Venta Galicia', value: detail.esPrice ? `${eur0(detail.esPrice[0])} – ${eur0(detail.esPrice[1])}` : '—' },
+                {
+                  label: 'Compra Alemania',
+                  value: detail.dePrice ? `${eur0(detail.dePrice[0])} – ${eur0(detail.dePrice[1])}` : '—',
+                  hint: priceHint(detail, 'de'),
+                },
+                {
+                  label: 'Venta Galicia',
+                  value: detail.esPrice ? `${eur0(detail.esPrice[0])} – ${eur0(detail.esPrice[1])}` : '—',
+                  hint: priceHint(detail, 'es'),
+                },
               ]}
             />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -253,7 +316,7 @@ export default function CatalogView({ onSimulate }) {
               <Card className="p-3">
                 <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Ganarías aprox.</p>
                 <p className={cx('text-xl font-extrabold mt-1', { emerald: 'text-emerald-400', amber: 'text-amber-300', rose: 'text-rose-400', slate: 'text-slate-300' }[profitLevel(est(detail)?.profit).tone])}>{est(detail) ? eur0(est(detail).profit) : '—'}</p>
-                <p className="text-[11px] text-slate-500 mt-1">Limpio, con todos los gastos e IVA descontados</p>
+                <p className="text-[11px] text-slate-500 mt-1">Limpio, con gastos e impuestos descontados ({regime === 'particular' ? 'particular: IRPF' : regime === 'general' ? 'régimen general: IVA 21 %' : 'REBU: IVA sobre el margen'})</p>
               </Card>
               <Card className="p-3">
                 <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Veredicto</p>
@@ -270,10 +333,15 @@ export default function CatalogView({ onSimulate }) {
                   {est(detail).lines.map((l) => (
                     <div key={l.label} className="flex justify-between text-slate-400"><span>− {l.label}</span><span>{eur0(l.amount)}</span></div>
                   ))}
-                  <div className="flex justify-between text-slate-400"><span>− IVA de la venta (REBU, sobre tu margen)</span><span>{eur0(est(detail).vat)}</span></div>
+                  {est(detail).vat > 0 && (
+                    <div className="flex justify-between text-slate-400"><span>− IVA de la venta ({est(detail).regime === 'general' ? 'régimen general, 21 %' : 'REBU, sobre tu margen'})</span><span>{eur0(est(detail).vat)}</span></div>
+                  )}
+                  {est(detail).irpf > 0 && (
+                    <div className="flex justify-between text-slate-400"><span>− IRPF sobre la ganancia (venta como particular)</span><span>{eur0(est(detail).irpf)}</span></div>
+                  )}
                   <div className="flex justify-between border-t border-slate-700 pt-1 font-bold"><span>= Te queda limpio</span><span>{eur0(est(detail).profit)}</span></div>
                 </div>
-                <p className="text-[11px] text-slate-500 mt-2">Precios medios de mercado (no el más barato ni el más caro). Los gastos salen de Ajustes → Tarifas.</p>
+                <p className="text-[11px] text-slate-500 mt-2">Precios medios de mercado a {detail.kmRef ? `${detail.kmRef.toLocaleString('es-ES')} km` : 'su km de referencia'} (no el más barato ni el más caro). Los gastos salen de Ajustes → Tarifas.</p>
               </Card>
             )}
             <Alert tone="info">
