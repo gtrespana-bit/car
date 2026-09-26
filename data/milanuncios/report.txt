@@ -1,181 +1,175 @@
-Captura 2026-09-26T01:14:29.150Z
-Golf VII.5 · Diésel 150 CV · 2017-2019: 86 válidos de 119
-Golf VII Variant · Diésel 150 CV · 2014-2020: 59 válidos de 366
-Golf VII (5G) · Diésel 185 CV · 2016-2016: 41 válidos de 55
+Captura 2026-09-26T02:32:23.543Z
 Golf VII.5 · Diésel 185 CV · 2018-2018: 24 válidos de 31
-Golf VIII · Diésel 150 CV · 2020-2022: 92 válidos de 168
-Golf VIII Variant · Diésel 150 CV · 2021-2021: 0 válidos de 76
-Tiguan II · Diésel 150 CV · 2016-2020: 287 válidos de 343
-Octavia Combi III · Diésel 150 CV · 2016-2019: 14 válidos de 34
-A3 8V · Diésel 150 CV · 2016-2018: 108 válidos de 208
-A3 8V · Gasolina 150 CV · 2017-2019: 86 válidos de 122
+Golf VII (5G) · Diésel 185 CV · 2016-2016: 41 válidos de 55
+Golf VIII Variant · Diésel 150 CV · 2021-2021: 13 válidos de 76
+Golf VII.5 · Diésel 150 CV · 2017-2019: 86 válidos de 119
+Golf VIII · Diésel 150 CV · 2020-2022: 67 válidos de 168
 A3 8V · Gasolina 190 CV · 2017-2017: 4 válidos de 5
-A3 8Y · Diésel 150 CV · 2022-2022: 27 válidos de 181
-Clase A W177 · Diésel 150 CV · 2019-2020: 158 válidos de 208
-Clase A W177 · Diésel 115 CV · 2019-2019: 83 válidos de 200
-Clase A W177 · Diésel 190 CV · 2020-2020: 62 válidos de 143
+A3 8V · Diésel 150 CV · 2016-2018: 108 válidos de 208
+Octavia Combi III · Diésel 150 CV · 2016-2019: 14 válidos de 34
+A3 8V · Gasolina 150 CV · 2017-2019: 86 válidos de 122
+Tiguan II · Diésel 150 CV · 2016-2020: 287 válidos de 343
+Golf VII Variant · Diésel 150 CV · 2014-2020: 39 válidos de 366
 Clase A W177 · Diésel 175 CV · 2020-2020: 2 válidos de 4
-Corolla TS E210 · Híbrido 185 CV · 2019-2021: 54 válidos de 347
-Corolla TS E210 · Híbrido 180 CV · 2019-2021: 0 válidos de 347
+Clase A W177 · Diésel 190 CV · 2020-2020: 88 válidos de 134
 Corolla TS E210 · Híbrido 150 CV · 2019-2019: 0 válidos de 80
+A3 8Y · Diésel 150 CV · 2022-2022: 49 válidos de 181
 Corolla E210 · Híbrido 125 CV · 2019-2020: 0 válidos de 176
-León ST 5F · Diésel 150 CV · 2019-2020: 20 válidos de 26
+Clase A W177 · Diésel 150 CV · 2019-2020: 168 válidos de 208
+Clase A W177 · Diésel 115 CV · 2019-2019: 168 válidos de 200
 Serie 3 Touring F31 · Diésel 190 CV · 2017-2018: 24 válidos de 85
-Duster II · Diésel 115 CV · 2018-2023: 114 válidos de 136
 Duster II · Diésel 110 CV · 2018-2018: 0 válidos de 14
 Duster II · Diésel 95 CV · 2020-2020: 2 válidos de 3
-Duster II · GLP 115 CV · 2020-2020: 1 válidos de 19
-Sportage QL · Diésel 135 CV · 2018-2020: 25 válidos de 29
-Sportage QL · Gasolina 175 CV · 2016-2020: 9 válidos de 19
+Duster II · GLP 115 CV · 2020-2020: 15 válidos de 19
 Sportage QL · Gasolina 130 CV · 2016-2017: 25 válidos de 36
+Sportage QL · Diésel 135 CV · 2018-2020: 25 válidos de 29
+Corolla TS E210 · Híbrido 185 CV · 2019-2021: 68 válidos de 347
 Sportage QL · Diésel 115 CV · 2019-2019: 13 válidos de 15
 Sportage QL · Microhíbrido 115 CV · 2019-2019: 2 válidos de 19
+Duster II · Diésel 115 CV · 2018-2023: 100 válidos de 136
 Sportage QL · Microhíbrido 135 CV · 2019-2019: 4 válidos de 44
 Caddy 4 · Diésel 100 CV · 2018-2018: 19 válidos de 27
-Caddy 5 · Diésel 100 CV · 2021-2023: 43 válidos de 71
+Sportage QL · Gasolina 175 CV · 2016-2020: 9 válidos de 19
+Corolla TS E210 · Híbrido 180 CV · 2019-2021: 0 válidos de 347
+Caddy 5 · Gasolina 115 CV · 2022-2022: 1 válidos de 1
 Caddy 5 · Diésel 75 CV · 2021-2022: 0 válidos de 3
 Caddy 5 · Diésel 120 CV · 2021-2022: 52 válidos de 80
-Caddy 5 · Gasolina 115 CV · 2022-2022: 1 válidos de 1
-Q3 8U · Diésel 150 CV · 2015-2018: 17 válidos de 103
-Q3 F3 · Diésel 150 CV · 2018-2025: 274 válidos de 443
-Q3 F3 · Gasolina 150 CV · 2019-2025: 46 válidos de 83
+Caddy 5 · Diésel 100 CV · 2021-2023: 43 válidos de 71
 Q3 F3 · Diésel 190 CV · 2019-2019: 6 válidos de 8
-Tucson TL · Diésel 135 CV · 2016-2019: 40 válidos de 50
 Tucson TL · Diésel 185 CV · 2019-2019: 0 válidos de 0
-Tucson NX4 · Microhíbrido 135 CV · 2021-2025: 65 válidos de 96
 Tucson NX4 · Microhíbrido 180 CV · 2021-2021: 1 válidos de 3
+Q3 8U · Diésel 150 CV · 2015-2018: 17 válidos de 103
 Tucson NX4 · Gasolina 150 CV · 2023-2023: 6 válidos de 8
-Tucson NX4 · Híbrido enchufable 265 CV · 2023-2023: 22 válidos de 51
+Tucson NX4 · Híbrido enchufable 265 CV · 2023-2023: 32 válidos de 51
+Tucson TL · Diésel 135 CV · 2016-2019: 40 válidos de 50
 Tucson TL · Diésel 115 CV · 2018-2018: 11 válidos de 17
 Octavia IV · Gasolina 150 CV · 2020-2020: 5 válidos de 5
-Octavia IV · Diésel 115 CV · 2020-2023: 33 válidos de 90
 Octavia IV · Diésel 150 CV · 2020-2020: 5 válidos de 12
 Octavia III · Diésel 150 CV · 2019-2019: 0 válidos de 5
-Octavia Combi IV · Diésel 150 CV · 2020-2023: 60 válidos de 106
-Octavia Combi IV · Diésel 200 CV · 2021-2021: 6 válidos de 6
+Tucson NX4 · Microhíbrido 135 CV · 2021-2025: 56 válidos de 96
+Q3 F3 · Gasolina 150 CV · 2019-2025: 46 válidos de 83
 Octavia Combi IV · Gasolina 150 CV · 2020-2020: 0 válidos de 5
-Octavia Combi IV · Diésel 115 CV · 2020-2023: 0 válidos de 90
-Sandero III · Gasolina 90 CV · 2021-2024: 212 válidos de 306
+Octavia Combi IV · Diésel 200 CV · 2021-2021: 6 válidos de 6
+Octavia IV · Diésel 115 CV · 2020-2023: 33 válidos de 90
 Sandero III · Gasolina 100 CV · 2021-2022: 2 válidos de 4
 Sandero II · Gasolina 90 CV · 2019-2019: 56 válidos de 64
-Kodiaq I · Diésel 150 CV · 2017-2023: 46 válidos de 56
+Octavia Combi IV · Diésel 150 CV · 2020-2023: 61 válidos de 106
 Kodiaq I · Diésel 200 CV · 2022-2022: 4 válidos de 4
+Octavia Combi IV · Diésel 115 CV · 2020-2023: 0 válidos de 90
 Kodiaq I · Diésel 190 CV · 2018-2020: 3 válidos de 5
-Kodiaq I · Gasolina 150 CV · 2018-2023: 16 válidos de 20
 Kodiaq II · Diésel 150 CV · 2024-2025: 2 válidos de 4
 Kodiaq I · Diésel 240 CV · 2019-2019: 1 válidos de 1
-Serie 3 G20 · Diésel 190 CV · 2019-2021: 99 válidos de 144
 Serie 3 F30 LCI · Diésel 190 CV · 2019-2019: 0 válidos de 65
-Serie 3 Touring G21 · Diésel 190 CV · 2019-2021: 0 válidos de 144
+Kodiaq I · Diésel 150 CV · 2017-2023: 46 válidos de 56
+Kodiaq I · Gasolina 150 CV · 2018-2023: 16 válidos de 20
+Serie 3 G20 · Diésel 190 CV · 2019-2021: 99 válidos de 144
 Serie 3 F30 LCI · Diésel 185 CV · 2016-2016: 30 válidos de 50
-Serie 1 F20 LCI · Diésel 150 CV · 2015-2019: 278 válidos de 333
-Serie 1 F40 · Diésel 150 CV · 2020-2022: 198 válidos de 239
+Q3 F3 · Diésel 150 CV · 2018-2025: 249 válidos de 443
 Serie 1 F20 LCI · Diésel 115 CV · 2018-2018: 39 válidos de 55
+Serie 3 Touring G21 · Diésel 190 CV · 2019-2021: 0 válidos de 144
 Golf VII (5G) · Diésel 150 CV · 2013-2013: 39 válidos de 48
-Golf VII.5 · Diésel 115 CV · 2019-2019: 71 válidos de 113
+Serie 1 F40 · Diésel 150 CV · 2020-2022: 198 válidos de 239
+Sandero III · Gasolina 90 CV · 2021-2024: 228 válidos de 306
+Serie 1 F20 LCI · Diésel 150 CV · 2015-2019: 278 válidos de 333
 X1 F48 · Diésel 150 CV · 2016-2021: 229 válidos de 289
-Karoq · Diésel 150 CV · 2017-2024: 67 válidos de 89
-Ateca · Diésel 150 CV · 2016-2020: 29 válidos de 42
-Ateca restyling · Diésel 150 CV · 2021-2024: 57 válidos de 70
-Formentor · Diésel 150 CV · 2021-2024: 32 válidos de 39
+GLC X253 · Diésel 170 CV · 2020-2020: 43 válidos de 48
+Golf VII.5 · Diésel 115 CV · 2019-2019: 77 válidos de 113
+GLC X253 · Diésel 195 CV · 2019-2022: 104 válidos de 161
 T-Roc · Diésel 150 CV · 2018-2023: 49 válidos de 130
 Q5 FY · Diésel 205 CV · 2020-2024: 2 válidos de 2
-GLC X253 · Diésel 195 CV · 2019-2022: 110 válidos de 161
-GLC X253 · Diésel 170 CV · 2020-2020: 43 válidos de 48
+Karoq · Diésel 150 CV · 2017-2024: 67 válidos de 89
+XC60 II · Diésel 190 CV · 2018-2020: 47 válidos de 60
 A4 Avant B9 · Diésel 150 CV · 2017-2020: 74 válidos de 221
 X3 G01 · Diésel 190 CV · 2018-2023: 75 válidos de 107
-XC60 II · Diésel 190 CV · 2018-2020: 47 válidos de 60
 Serie 5 G30 · Diésel 190 CV · 2017-2023: 90 válidos de 179
 Passat Variant B8 · Diésel 150 CV · 2016-2023: 147 válidos de 344
-Superb III · Diésel 150 CV · 2015-2023: 49 válidos de 89
 A6 C8 · Diésel 205 CV · 2018-2023: 10 válidos de 11
-Clase E W213 · Diésel 195 CV · 2016-2021: 282 válidos de 805
 Qashqai J11 · Diésel 115 CV · 2019-2021: 164 válidos de 197
-3008 II · Diésel 130 CV · 2018-2023: 273 válidos de 328
-León 5F · Diésel 150 CV · 2018-2020: 66 válidos de 129
+Superb III · Diésel 150 CV · 2015-2023: 49 válidos de 89
+Clase C W205 · Diésel 195 CV · 2019-2020: 57 válidos de 153
 Sportage NQ5 · Microhíbrido 135 CV · 2022-2024: 39 válidos de 62
-RAV4 V · Híbrido 220 CV · 2019-2022: 197 válidos de 223
-Clase C W205 · Diésel 195 CV · 2019-2020: 32 válidos de 153
-Clase C Estate S205 · Diésel 195 CV · 2019-2021: 6 válidos de 220
+Clase C Estate S205 · Diésel 195 CV · 2019-2021: 28 válidos de 220
 Tucson TL · Microhíbrido 135 CV · 2019-2020: 17 válidos de 74
+RAV4 V · Híbrido 220 CV · 2019-2022: 197 válidos de 223
+3008 II · Diésel 130 CV · 2018-2023: 273 válidos de 328
 5008 II · Diésel 130 CV · 2019-2021: 40 válidos de 57
-Touran II · Diésel 150 CV · 2016-2021: 113 válidos de 135
 Q7 4M · Diésel 230 CV · 2018-2020: 3 válidos de 3
 Q2 · Diésel 150 CV · 2018-2021: 15 válidos de 39
-Tarraco · Diésel 150 CV · 2019-2021: 21 válidos de 28
 GLA H247 · Diésel 150 CV · 2020-2023: 75 válidos de 97
 X2 F39 · Diésel 150 CV · 2018-2022: 65 válidos de 90
+Touran II · Diésel 150 CV · 2016-2021: 113 válidos de 135
 XC40 · Diésel 150 CV · 2018-2021: 45 válidos de 61
 A5 F5 · Diésel 190 CV · 2017-2020: 95 válidos de 206
+Q5 FY · Diésel 190 CV · 2019-2020: 0 válidos de 39
+Arteon · Diésel 150 CV · 2018-2021: 99 válidos de 107
 Serie 5 Touring G31 · Diésel 190 CV · 2017-2020: 0 válidos de 168
 Serie 4 F32 · Diésel 190 CV · 2016-2020: 110 válidos de 184
-Arteon · Diésel 150 CV · 2018-2021: 99 válidos de 107
-Q5 FY · Diésel 190 CV · 2019-2020: 0 válidos de 39
-Clase E W212 · Diésel 170 CV · 2013-2016: 23 válidos de 919
-Clase C W205 pre · Diésel 170 CV · 2014-2018: 185 válidos de 744
-GLC X253 pre · Diésel 170 CV · 2015-2019: 110 válidos de 198
+GLC X253 pre · Diésel 170 CV · 2015-2019: 141 válidos de 198
 GLA X156 · Diésel 136 CV · 2015-2019: 153 válidos de 171
 CLA C117 · Diésel 136 CV · 2015-2019: 214 válidos de 279
-CLA C118 · Diésel 150 CV · 2019-2023: 124 válidos de 271
 GLB X247 · Diésel 150 CV · 2020-2023: 102 válidos de 104
+CLA C118 · Diésel 150 CV · 2019-2023: 124 válidos de 271
 Clase B W247 · Diésel 150 CV · 2019-2023: 123 válidos de 198
 GLE W166 · Diésel 204 CV · 2015-2018: 21 válidos de 23
 GLE V167 · Diésel 245 CV · 2019-2022: 27 válidos de 29
+Clase E W213 · Diésel 195 CV · 2016-2021: 308 válidos de 796
 Serie 3 F30 LCI · Diésel 190 CV · 2015-2019: 32 válidos de 257
-Serie 3 Touring F31 · Diésel 190 CV · 2015-2019: 15 válidos de 88
 Serie 5 F10 · Diésel 190 CV · 2014-2016: 71 válidos de 132
 X3 F25 · Diésel 190 CV · 2014-2017: 59 válidos de 81
-X4 F26 · Diésel 190 CV · 2015-2018: 77 válidos de 107
-X4 G02 · Diésel 190 CV · 2018-2022: 49 válidos de 81
-X5 F15 · Diésel 258 CV · 2014-2018: 64 válidos de 76
+Serie 3 Touring F31 · Diésel 190 CV · 2015-2019: 15 válidos de 88
+X4 F26 · Diésel 190 CV · 2015-2018: 62 válidos de 107
+X4 G02 · Diésel 190 CV · 2018-2022: 64 válidos de 81
 X5 G05 · Diésel 265 CV · 2019-2022: 30 válidos de 42
-Serie 4 Gran Coupé F36 · Diésel 190 CV · 2015-2020: 24 válidos de 78
-Serie 2 AT F45 · Diésel 150 CV · 2015-2021: 92 válidos de 140
+X5 F15 · Diésel 258 CV · 2014-2018: 64 válidos de 76
 Q5 8R · Diésel 190 CV · 2014-2017: 29 válidos de 73
+Serie 4 Gran Coupé F36 · Diésel 190 CV · 2015-2020: 24 válidos de 78
 A4 B9 · Diésel 150 CV · 2016-2020: 45 válidos de 300
+Serie 2 AT F45 · Diésel 150 CV · 2015-2021: 92 válidos de 140
 A6 C7 · Diésel 190 CV · 2015-2018: 108 válidos de 117
 A5 Sportback F5 · Diésel 190 CV · 2017-2020: 3 válidos de 41
-A3 8Y · Diésel 150 CV · 2020-2023: 108 válidos de 575
 Q7 4M 50 · Diésel 272 CV · 2016-2019: 43 válidos de 46
 Golf VII (5G) · Diésel 150 CV · 2013-2016: 0 válidos de 238
 Tiguan I · Diésel 150 CV · 2013-2016: 12 válidos de 62
+Clase E W212 · Diésel 170 CV · 2013-2016: 52 válidos de 919
 Multivan T6 · Diésel 150 CV · 2016-2021: 76 válidos de 86
 California T6 · Diésel 150 CV · 2016-2021: 85 válidos de 92
 Macan 95B · Gasolina 252 CV · 2016-2021: 47 válidos de 69
+Clase C W205 pre · Diésel 170 CV · 2014-2018: 452 válidos de 744
 Cayenne 92A · Diésel 262 CV · 2015-2017: 54 válidos de 60
 Evoque L538 · Diésel 150 CV · 2016-2018: 0 válidos de 208
 Discovery Sport L550 · Diésel 150 CV · 2016-2019: 0 válidos de 135
 Range Rover Sport L494 · Diésel 249 CV · 2015-2018: 0 válidos de 8
-XC90 II · Diésel 235 CV · 2015-2019: 35 válidos de 36
 V60 II · Diésel 190 CV · 2018-2020: 13 válidos de 31
+XC90 II · Diésel 235 CV · 2015-2019: 35 válidos de 36
 CX-5 KF · Diésel 150 CV · 2017-2021: 39 válidos de 55
-Land Cruiser J150 · Diésel 177 CV · 2015-2020: 65 válidos de 82
 Countryman F60 · Diésel 150 CV · 2017-2021: 52 válidos de 91
-C-HR I · Híbrido 122 CV · 2017-2022: 168 válidos de 1041
-Yaris III · Híbrido 100 CV · 2015-2020: 149 válidos de 171
-Yaris IV · Híbrido 116 CV · 2020-2023: 153 válidos de 543
-Corolla E210 · Híbrido 122 CV · 2019-2022: 73 válidos de 622
+A3 8Y · Diésel 150 CV · 2020-2023: 145 válidos de 575
+Land Cruiser J150 · Diésel 177 CV · 2015-2020: 65 válidos de 82
+Yaris III · Híbrido 100 CV · 2015-2020: 122 válidos de 171
 RAV4 IV · Híbrido 197 CV · 2016-2018: 57 válidos de 58
-NX 300h · Híbrido 197 CV · 2015-2021: 95 válidos de 102
 UX 250h · Híbrido 184 CV · 2019-2023: 97 válidos de 106
+NX 300h · Híbrido 197 CV · 2015-2021: 95 válidos de 102
 CT 200h · Híbrido 136 CV · 2014-2020: 57 válidos de 60
-Niro DE HEV · Híbrido 141 CV · 2017-2021: 158 válidos de 168
+Yaris IV · Híbrido 116 CV · 2020-2023: 294 válidos de 542
 Ioniq HEV · Híbrido 141 CV · 2017-2021: 84 válidos de 126
+Niro DE HEV · Híbrido 141 CV · 2017-2021: 158 válidos de 168
 Kona HEV · Híbrido 141 CV · 2020-2022: 36 válidos de 56
-Outlander PHEV III · Híbrido enchufable 224 CV · 2016-2021: 70 válidos de 96
-Serie 3 G20 330e · Híbrido enchufable 292 CV · 2019-2022: 71 válidos de 108
 X1 F48 25e · Híbrido enchufable 220 CV · 2020-2022: 57 válidos de 77
+Serie 3 G20 330e · Híbrido enchufable 292 CV · 2019-2022: 71 válidos de 108
+Outlander PHEV III · Híbrido enchufable 224 CV · 2016-2021: 70 válidos de 96
 Serie 2 AT F45 225xe · Híbrido enchufable 224 CV · 2016-2021: 76 válidos de 83
-Clase A W177 250e · Híbrido enchufable 218 CV · 2020-2023: 55 válidos de 595
-GLC X253 300e · Híbrido enchufable 320 CV · 2020-2022: 18 válidos de 427
 XC60 II T8 · Híbrido enchufable 390 CV · 2018-2021: 85 válidos de 104
+Corolla E210 · Híbrido 122 CV · 2019-2022: 209 válidos de 623
 XC40 T5 Recharge · Híbrido enchufable 262 CV · 2020-2023: 176 válidos de 253
-Q5 FY 55 TFSIe · Híbrido enchufable 367 CV · 2020-2022: 125 válidos de 436
-Passat Variant B8 GTE · Híbrido enchufable 218 CV · 2016-2022: 137 válidos de 142
 3008 II Hybrid4 · Híbrido enchufable 300 CV · 2020-2023: 3 válidos de 4
+Passat Variant B8 GTE · Híbrido enchufable 218 CV · 2016-2022: 137 válidos de 142
 Model 3 · Eléctrico 283 CV · 2019-2023: 131 válidos de 178
+GLC X253 300e · Híbrido enchufable 320 CV · 2020-2022: 26 válidos de 427
 Kona EV · Eléctrico 204 CV · 2019-2022: 17 válidos de 18
 e-Niro · Eléctrico 204 CV · 2019-2022: 33 válidos de 36
 ID.3 · Eléctrico 204 CV · 2020-2023: 21 válidos de 56
 Zoe R135 · Eléctrico 136 CV · 2020-2023: 54 válidos de 64
-Total: 10766
+Clase A W177 250e · Híbrido enchufable 218 CV · 2020-2023: 90 válidos de 595
+Q5 FY 55 TFSIe · Híbrido enchufable 367 CV · 2020-2022: 174 válidos de 436
+C-HR I · Híbrido 122 CV · 2017-2022: 269 válidos de 1041
+Total: 11539
