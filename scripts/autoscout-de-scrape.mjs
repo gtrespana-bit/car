@@ -13,6 +13,9 @@
 import { writeFileSync, mkdirSync, readFileSync, appendFileSync, existsSync } from 'node:fs';
 import { MARKET_OBSERVATIONS as O, cvOf, fuelOf } from '../src/data/catalog/marketEvidence.js';
 import { CANDIDATES } from './candidates.mjs';
+// --es: misma búsqueda en autoscout24.es (precios de VENTA en España, sin Canarias)
+const ES = process.argv.includes('--es');
+const DOM = ES ? 'https://www.autoscout24.es' : 'https://www.autoscout24.de', CC = ES ? 'ES' : 'DE', DIR = ES ? 'data/autoscout-es' : 'data/autoscout';
 
 // generación del catálogo → [marca, modelo en autoscout, carrocería]
 // body: 5 = Kombi, 6 = Limousine, null = cualquiera (se filtra por título)
@@ -84,7 +87,7 @@ if (process.argv.includes('--list')) { for (const g of groups.values()) console.
 async function page(url) {
   for (let i = 0; i < 3; i++) {
     try {
-      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36', 'Accept-Language': 'de-DE,de;q=0.9', Accept: 'text/html' } });
+      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36', 'Accept-Language': ES ? 'es-ES,es;q=0.9' : 'de-DE,de;q=0.9', Accept: 'text/html' } });
       if (r.status === 429 || r.status >= 500) { await sleep(8000); continue; }
       if (!r.ok) return { error: r.status };
       const html = await r.text();
@@ -104,23 +107,23 @@ function parse(l) {
   const regM = String(l.tracking?.firstRegistration || det).match(/(\d{2})[-/](\d{4})/);
   return {
     id: l.id,
-    url: l.url ? (l.url.startsWith('http') ? l.url : 'https://www.autoscout24.de' + l.url) : null,
+    url: l.url ? (l.url.startsWith('http') ? l.url : DOM + l.url) : null,
     price: digits(l.tracking?.price) ?? digits(l.price?.priceFormatted),
     km: digits(l.tracking?.mileage) ?? digits(l.vehicle?.mileageInKm),
     year: regM ? +regM[2] : null,
     kw: kwM ? +kwM[1] : null,
     title: [l.vehicle?.make, l.vehicle?.model, l.vehicle?.modelVersionInput, l.vehicle?.subtitle].filter(Boolean).join(' '),
-    city: l.location?.city || '', country: l.location?.countryCode || 'DE',
+    city: l.location?.city || '', zip: String(l.location?.zip || ''), country: l.location?.countryCode || CC,
     priv: /priv/i.test(l.seller?.type || ''),
     fuelTxt: l.vehicle?.fuel || '',
   };
 }
 
 const rows = [], seen = new Set(), report = [];
-mkdirSync('data/autoscout', { recursive: true });
+mkdirSync(DIR, { recursive: true });
 let debugSaved = false;
 // Progreso: cada grupo terminado se guarda al momento; si se corta, al relanzar sigue donde iba.
-const PROG = 'data/autoscout/progress.jsonl';
+const PROG = DIR + '/progress.jsonl';
 const done = new Map();
 if (existsSync(PROG) && !process.argv.includes('--reset')) {
   for (const line of readFileSync(PROG, 'utf8').split('\n').filter(Boolean)) { const d = JSON.parse(line); done.set(d.name, d); }
@@ -134,30 +137,31 @@ async function runGroup(g) {
   let n = 0, total = 0; const mine = [];
   for (let year = g.y0; year <= g.y1; year++) {
     for (let p = 1; p <= PAGES; p++) {
-      const q = new URLSearchParams({ atype: 'C', cy: 'D', ustate: 'N,U', sort: 'standard', desc: '0', fregfrom: year, fregto: year,
+      const q = new URLSearchParams({ atype: 'C', cy: ES ? 'E' : 'D', ustate: 'N,U', sort: 'standard', desc: '0', fregfrom: year, fregto: year,
         powerfrom: kw(g.cv) - tol(g), powerto: kw(g.cv) + tol(g), powertype: 'kw', page: p });
       if (FUEL[g.fuel]) q.set('fuel', FUEL[g.fuel]);
       if (body) q.set('body', body);
-      const j = await page(`https://www.autoscout24.de/lst/${make}/${model}?${q}`);
+      const j = await page(`${DOM}/lst/${make}/${model}?${q}`);
       if (j.error) {
         console.log(`${name} ${year} p${p}: error ${j.error}`);
-        if (j.html && !debugSaved) { writeFileSync('data/autoscout/debug.html', j.html); debugSaved = true; }
+        if (j.html && !debugSaved) { writeFileSync(DIR + '/debug.html', j.html); debugSaved = true; }
         break;
       }
       if (p === 1) total += j.total || 0;
       if (!j.listings.length) break;
-      if (!debugSaved) { writeFileSync('data/autoscout/sample-listing.json', JSON.stringify(j.listings[0], null, 2)); debugSaved = true; }
+      if (!debugSaved) { writeFileSync(DIR + '/sample-listing.json', JSON.stringify(j.listings[0], null, 2)); debugSaved = true; }
       let fresh = 0;
       for (const l of j.listings) {
         const a = parse(l);
         if (!a.id || seen.has(a.id)) continue;
         seen.add(a.id); fresh++;
-        if (!a.url || !a.price || !a.km || !a.year || a.country !== 'DE') continue;
+        if (!a.url || !a.price || !a.km || !a.year || a.country !== CC) continue;
+        if (ES && /^(35|38)/.test(a.zip)) continue; // Canarias (IGIC)
         if (!(a.year >= g.y0 && a.year <= g.y1 && a.km > 1000 && a.km < 350000 && a.price > 3000 && a.price < 150000)) continue;
         if (a.kw && Math.abs(a.kw - kw(g.cv)) > tol(g)) continue;
         if (BAN[g.gen] && BAN[g.gen].test(a.title)) continue;
         if (g.fuel === 'Microhíbrido' && /diesel/i.test(a.fuelTxt)) continue;
-        mine.push([g.brand, g.model, g.gen, 'DE', g.engine, a.year, a.km, a.price, `autoscout24.de (${a.city}${a.priv ? ', particular' : ''})`, a.url]);
+        mine.push([g.brand, g.model, g.gen, CC, g.engine, a.year, a.km, a.price, `autoscout24.${ES ? 'es' : 'de'} (${a.city}${a.priv ? ', particular' : ''})`, a.url]);
         n++;
       }
       if (j.listings.length < 20 || !fresh) break;
@@ -180,8 +184,8 @@ rows.forEach((r) => (byGen[r[2] + r[4]] ||= []).push(r[7]));
 const med = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
 const clean = rows.filter((r) => { const m = med(byGen[r[2] + r[4]]); return r[7] > m * 0.45 && r[7] < m * 2; });
 
-writeFileSync('data/autoscout/rows.json', JSON.stringify(clean));
-writeFileSync('data/autoscout/report.txt', `Captura ${new Date().toISOString()}\n` + report.join('\n') + `\nTotal: ${clean.length} (quitados ${rows.length - clean.length} por precio atípico)\n`);
+writeFileSync(DIR + '/rows.json', JSON.stringify(clean));
+writeFileSync(DIR + '/report.txt', `Captura ${new Date().toISOString()}\n` + report.join('\n') + `\nTotal: ${clean.length} (quitados ${rows.length - clean.length} por precio atípico)\n`);
 console.log(`\nTotal ${clean.length} anuncios válidos → data/autoscout/rows.json`);
 
 if (process.argv.includes('--import')) {

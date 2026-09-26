@@ -21,7 +21,7 @@ const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0
 // 1) Grupos a buscar, sacados de los anuncios que ya tiene el catálogo
 const groups = new Map();
 for (const o of O) {
-  if (o.kind !== 'anuncio') continue;
+  if (o.kind !== 'anuncio' || ['Seat', 'Cupra'].includes(o.brand)) continue;
   const cv = cvOf(o), fuel = fuelOf(o);
   if (!cv || !fuel) continue;
   const k = [o.brand, o.model, o.gen, fuel, Math.round(cv / 5) * 5].join('|');
@@ -68,11 +68,25 @@ for (const g of groups.values()) {
   if (loose(g)) { p.delete('hpFrom'); p.delete('hpTo'); }
   if (FUEL[g.fuel]) p.set('fuel', FUEL[g.fuel]);
   let n = 0, total = 0;
+  // La API devuelve como mucho 100 anuncios por consulta: si hay más, se parte por tramos de precio.
+  async function fetchAll(pp, lo, hi, depth = 0) {
+    pp.set('priceFrom', lo); pp.set('priceTo', hi);
+    const j = await get(`${API}?${pp}`);
+    await sleep(500);
+    if (j.error) return { error: j.error, ads: [], hits: 0 };
+    const hits = j.pagination?.totalHits?.value ?? 0;
+    if (hits > LIMIT && hi - lo > 500 && depth < 6) {
+      const mid = Math.round((lo + hi) / 2 / 100) * 100;
+      const a = await fetchAll(pp, lo, mid, depth + 1), b = await fetchAll(pp, mid + 1, hi, depth + 1);
+      return { ads: [...a.ads, ...b.ads], hits };
+    }
+    return { ads: j.ads || [], hits };
+  }
   for (let year = g.y0; year <= g.y1; year++) {
     p.set('yearFrom', year); p.set('yearTo', year);
-    const j = await get(`${API}?${p}`);
+    const j = await fetchAll(p, 4000, 200000);
     if (j.error) { report.push(`${g.gen} ${g.fuel} ${g.cv} ${year}: error ${j.error}`); console.log(report.at(-1)); continue; }
-    total += j.pagination?.totalHits?.value ?? 0;
+    total += j.hits;
     for (const ad of j.ads || []) {
       if (seen.has(ad.id)) continue;
       seen.add(ad.id);

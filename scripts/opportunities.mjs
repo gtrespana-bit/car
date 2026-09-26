@@ -8,12 +8,15 @@ import { existsSync, readFileSync } from 'node:fs';
 // mobile.de (data/mobilede/rows.json, capturado con scripts/mobilede-scrape.mjs): el mayor portal alemán.
 // Se quitan los que ya estaban por autoscout (mismo modelo, año, km y precio).
 const BASE = [...MARKET_OBSERVATIONS, ...CANDIDATE_OBSERVATIONS];
-const dupKey = (o) => [o.gen, o.year, o.km, o.price].join('|');
-const have = new Set(BASE.filter((o) => o.market === 'DE').map(dupKey));
-const MOBILE = (process.argv.includes('--sin-mobile') || !existsSync('data/mobilede/rows.json')) ? [] :
-  JSON.parse(readFileSync('data/mobilede/rows.json', 'utf8'))
-    .map(([brand, model, gen, market, engine, year, km, price, source, url]) => ({ brand, model, gen, market, kind: 'anuncio', engine, year, km, price, source, url }))
-    .filter((o) => !have.has(dupKey(o)) && (have.add(dupKey(o)), true));
+const dupKey = (o) => [o.market, o.gen, o.year, o.km, o.price].join('|');
+const have = new Set(BASE.map(dupKey));
+// Capturas completas hechas en el PC del usuario (cada fila con su URL individual):
+//   DE: mobile.de · ES: milanuncios (API) y autoscout24.es. Se quitan duplicados.
+const FILES = process.argv.includes('--sin-mobile') ? [] : ['data/mobilede/rows.json', 'data/milanuncios/rows.json', 'data/autoscout-es/rows.json'];
+const MOBILE = FILES.filter((f) => existsSync(f)).flatMap((f) => JSON.parse(readFileSync(f, 'utf8')))
+  .filter((r) => !['Seat', 'Cupra'].includes(r[0]))
+  .map(([brand, model, gen, market, engine, year, km, price, source, url]) => ({ brand, model, gen, market, kind: 'anuncio', engine, year, km, price, source, url }))
+  .filter((o) => !have.has(dupKey(o)) && (have.add(dupKey(o)), true));
 const O = [...BASE, ...MOBILE];
 import { priceFit } from '../src/data/catalog/priceModel.js';
 import { catalogEstimate } from '../src/domain/catalogEstimate.js';

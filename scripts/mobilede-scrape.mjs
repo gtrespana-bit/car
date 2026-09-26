@@ -52,7 +52,7 @@ const M = {
   '5008 II': ['Peugeot', '5008'], 'Macan 95B': ['Porsche', 'Macan'], 'Cayenne 92A': ['Porsche', 'Cayenne'],
   'Evoque L538': ['Land Rover', 'Range Rover Evoque'], 'Discovery Sport L550': ['Land Rover', 'Discovery Sport'],
   'Range Rover Sport L494': ['Land Rover', 'Range Rover Sport'], 'NX 300h': ['Lexus', 'NX 300|NX 300h'], 'UX 250h': ['Lexus', 'UX 250h|UX'],
-  'CT 200h': ['Lexus', 'CT 200h|CT'], 'CX-5 KF': ['Mazda', 'CX-5'], 'Countryman F60': ['MINI', 'Cooper D Countryman|Countryman'],
+  'CT 200h': ['Lexus', 'CT 200h|CT'], 'CX-5 KF': ['Mazda', 'CX-5'], 'Countryman F60': ['MINI', 'Countryman D (Cooper)|Cooper D Countryman|One D Countryman'],
   'Outlander PHEV III': ['Mitsubishi', 'Outlander'], 'Model 3': ['Tesla', 'Model 3'], 'Zoe R135': ['Renault', 'ZOE|Zoe'],
 };
 const FT = { 'Diésel': 'DIESEL', 'Gasolina': 'PETROL', 'Híbrido': 'HYBRID', 'Híbrido enchufable': 'HYBRID', 'Eléctrico': 'ELECTRICITY' };
@@ -134,7 +134,7 @@ function parse(html) {
     out.push({ id: m[2], url: `https://www.mobile.de/es/veh%C3%ADculos/detalles.html?id=${m[2]}`, text: t,
       year: +pr[2], km: +km[1].replace(/\./g, ''), kw: kwm ? +kwm[1] : null, price: +price[1].replace(/\./g, ''),
       country: (t.match(/\b([A-Z]{2})-\d{4,5}/) || [])[1] || '?', priv: /particular|privat/i.test(t),
-      damaged: /daños|unfall|accidente reparad/i.test(t), vat: /IVA|MwSt/i.test(t) });
+      damaged: /motorschaden|getriebeschaden|motor defekt|defekt|daños en el motor|averiado|export only/i.test(t), vat: /IVA|MwSt/i.test(t) });
   }
   const total = +((strip(html).match(/([\d.]+)\s*(?:ofertas|resultados|Angebote)/) || [])[1] || '0').replace(/\./g, '');
   return { items: out, total };
