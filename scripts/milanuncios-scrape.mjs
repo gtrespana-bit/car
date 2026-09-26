@@ -61,8 +61,8 @@ const attr = (ad, k) => ad.attributes?.find((a) => a.field?.raw === k)?.value?.r
 
 const rows = [], seen = new Set(), report = [];
 const only = process.argv.includes('--only') ? norm(process.argv[process.argv.indexOf('--only') + 1]) : null;
-for (const g of groups.values()) {
-  if (only && !norm(`${g.gen} ${g.fuel} ${g.cv}`).includes(only)) continue;
+const HILOS = process.argv.includes('--hilos') ? +process.argv[process.argv.indexOf('--hilos') + 1] : 3;
+async function runGroup(g) {
   const text = `${g.brand === 'Mercedes-Benz' ? 'mercedes' : norm(g.brand)} ${g.cand ? g.word : modelWord(g.model)}`;
   const p = new URLSearchParams({ text, category: '13', limit: String(LIMIT), yearFrom: g.y0, yearTo: g.y1, hpFrom: g.cv - HP_TOL, hpTo: g.cv + HP_TOL, priceFrom: 4000 });
   if (loose(g)) { p.delete('hpFrom'); p.delete('hpTo'); }
@@ -110,12 +110,13 @@ for (const g of groups.values()) {
         'https://www.milanuncios.com' + ad.url]);
       n++;
     }
-    await sleep(800);
+    await sleep(300);
   }
   report.push(`${g.gen} · ${g.fuel} ${g.cv} CV · ${g.y0}-${g.y1}: ${n} válidos de ${total ?? '?'}`);
   console.log(report.at(-1));
-  await sleep(800);
 }
+const queue = [...groups.values()].filter((g) => !only || norm(`${g.gen} ${g.fuel} ${g.cv}`).includes(only));
+await Promise.all(Array.from({ length: HILOS }, async () => { while (queue.length) await runGroup(queue.shift()); }));
 mkdirSync('data/milanuncios', { recursive: true });
 writeFileSync('data/milanuncios/rows.json', JSON.stringify(rows, null, 0));
 writeFileSync('data/milanuncios/report.txt', `Captura ${new Date().toISOString()}\n` + report.join('\n') + `\nTotal: ${rows.length}\n`);

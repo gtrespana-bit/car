@@ -128,7 +128,7 @@ const done = new Map();
 if (existsSync(PROG) && !process.argv.includes('--reset')) {
   for (const line of readFileSync(PROG, 'utf8').split('\n').filter(Boolean)) { const d = JSON.parse(line); done.set(d.name, d); }
 }
-const PAUSE = 400, PAGES = 8, PARALLEL = 4; // 8 páginas × 20 = hasta 160 anuncios por año y grupo
+const PAUSE = 400, PAGES = 8, PARALLEL = process.argv.includes('--hilos') ? +process.argv[process.argv.indexOf('--hilos') + 1] : 4; // 8 páginas × 20 = hasta 160 anuncios por año y grupo
 
 async function runGroup(g) {
   const name = `${g.gen} · ${g.fuel} ${g.cv} CV · ${g.y0}-${g.y1}`;
