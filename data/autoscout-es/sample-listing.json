@@ -1,0 +1,155 @@
+{
+  "id": "f2e88021-b409-4bd2-a7dc-f028ce3d9f72",
+  "identifier": {
+    "legacyId": null,
+    "crossReferenceId": null
+  },
+  "images": [
+    "https://prod.pictures.autoscout24.net/listing-images/f2e88021-b409-4bd2-a7dc-f028ce3d9f72_f7ab741f-85d7-46ae-84d1-a9138e3bfcae.jpg/250x188.webp",
+    "https://prod.pictures.autoscout24.net/listing-images/f2e88021-b409-4bd2-a7dc-f028ce3d9f72_8e30c9d1-6b61-4a6b-ade8-26dc49ae3642.jpg/250x188.webp",
+    "https://prod.pictures.autoscout24.net/listing-images/f2e88021-b409-4bd2-a7dc-f028ce3d9f72_9847d579-1cd9-4c35-bdf5-a3eff44f859b.jpg/250x188.webp",
+    "https://prod.pictures.autoscout24.net/listing-images/f2e88021-b409-4bd2-a7dc-f028ce3d9f72_eb763213-0671-4cbf-bd70-2c7f8d7937cb.jpg/250x188.webp",
+    "https://prod.pictures.autoscout24.net/listing-images/f2e88021-b409-4bd2-a7dc-f028ce3d9f72_5f59681b-6e55-483e-acfe-4f533213d38f.jpg/250x188.webp",
+    "https://prod.pictures.autoscout24.net/listing-images/f2e88021-b409-4bd2-a7dc-f028ce3d9f72_5e413dfe-7a2d-485f-868a-aff33addba2f.jpg/250x188.webp",
+    "https://prod.pictures.autoscout24.net/listing-images/f2e88021-b409-4bd2-a7dc-f028ce3d9f72_fcdfab4f-900a-4a66-9a5e-14287995a849.jpg/250x188.webp",
+    "https://prod.pictures.autoscout24.net/listing-images/f2e88021-b409-4bd2-a7dc-f028ce3d9f72_3ae9d6ca-afea-4faa-ac9b-4a64611fe21b.jpg/250x188.webp",
+    "https://prod.pictures.autoscout24.net/listing-images/f2e88021-b409-4bd2-a7dc-f028ce3d9f72_e76b3c94-6e7c-4ecc-bddb-8231713a2ac2.jpg/250x188.webp",
+    "https://prod.pictures.autoscout24.net/listing-images/f2e88021-b409-4bd2-a7dc-f028ce3d9f72_664e370f-f297-4253-b799-091314f70c2a.jpg/250x188.webp"
+  ],
+  "ocsImagesA": [],
+  "price": {
+    "priceFormatted": "€ 10.285",
+    "priceEvaluation": 1,
+    "isVatLabelLegallyRequired": false,
+    "priceSuperscriptString": "1",
+    "priceRaw": 10285,
+    "isPriceEvaluationEnabled": true,
+    "isConditionalPrice": false
+  },
+  "availableNow": true,
+  "availability": {
+    "fromDate": null,
+    "inDays": null
+  },
+  "superDeal": {
+    "oldPriceFormatted": "",
+    "isEligible": false
+  },
+  "url": "/anuncios/volkswagen-passat-variant-2-0tdi-bmt-advance-4m-110kw-diesel-gris-cat_ma74mo2089-f2e88021-b409-4bd2-a7dc-f028ce3d9f72",
+  "vehicle": {
+    "articleType": "Car",
+    "type": "Car",
+    "make": "Volkswagen",
+    "model": "Passat",
+    "modelGroup": "Passat",
+    "variant": "Variant",
+    "motorTypeName": "2.0 TDI",
+    "modelId": 2089,
+    "modelVersionInput": "Variant 2.0TDI BMT Advance 4M 110kW",
+    "modelVersionCustom": null,
+    "subtitle": null,
+    "offerType": "U",
+    "transmission": "manual",
+    "fuel": "Diésel",
+    "mileageInKm": "216.000 km",
+    "engineDisplacementInCCM": "1.968 cm³"
+  },
+  "location": {
+    "countryCode": "ES",
+    "zip": "17800",
+    "city": "OLOT",
+    "street": "COMPOSITOR TOLDRA, 15"
+  },
+  "seller": {
+    "dealer": {
+      "culture": "es-ES"
+    },
+    "id": "45609928",
+    "type": "Dealer",
+    "companyName": "GARATGE BOSCH",
+    "contactName": "Contáctanos en:",
+    "links": {
+      "infoPage": "https://www.autoscout24.es/profesionales/garatge-bosch-olot?atype=C",
+      "imprint": "https://www.autoscout24.es/profesionales/garatge-bosch-olot/aviso-legal"
+    },
+    "phones": [
+      {
+        "phoneType": "Office",
+        "formattedNumber": "+34 - 872452525",
+        "callTo": "+34872452525"
+      },
+      {
+        "phoneType": "Whatsapp",
+        "formattedNumber": "+34 - 919375215",
+        "callTo": null
+      }
+    ]
+  },
+  "appliedAdTier": "T10",
+  "adTier": "T10",
+  "isOcs": false,
+  "specialConditions": [],
+  "statistics": {
+    "leadsRange": "Zero"
+  },
+  "searchResultType": "Organic",
+  "searchResultSection": "Main",
+  "tracking": {
+    "firstRegistration": "04-2016",
+    "fuelType": "d",
+    "imageContent": "no-placeholder|0.2802265325174361",
+    "isSmyleEligible": "false",
+    "mileage": "216000",
+    "priceLabel": "top-price",
+    "price": "10285",
+    "orderBucket": "unknown",
+    "modelTaxonomy": "[make_id:74, model_group_id:100100, variant_id:213, generation_id:217, motortype_id:558, trim_id:4460];"
+  },
+  "coverImageAttractiveness": 0.2802265325174361,
+  "vehicleDetails": [
+    {
+      "data": "216.000 km",
+      "iconName": "mileage_odometer",
+      "ariaLabel": "Kilometraje"
+    },
+    {
+      "data": "manual",
+      "iconName": "gearbox",
+      "ariaLabel": "Transmisión"
+    },
+    {
+      "data": "04/2016",
+      "iconName": "calendar",
+      "ariaLabel": "Año"
+    },
+    {
+      "data": "Diésel",
+      "iconName": "gas_pump",
+      "ariaLabel": "Tipo de combustible"
+    },
+    {
+      "data": "110 kW (150 CV)",
+      "iconName": "speedometer",
+      "ariaLabel": "Potencia"
+    }
+  ],
+  "wltpValues": [],
+  "trackingParameters": [
+    {
+      "key": "boost_level",
+      "value": "t10"
+    },
+    {
+      "key": "applied_boost_level",
+      "value": "t10"
+    },
+    {
+      "key": "relevance_adjustment",
+      "value": "organic"
+    },
+    {
+      "key": "boosting_product",
+      "value": "none"
+    }
+  ]
+}
