@@ -140,10 +140,10 @@ function parse(html) {
   return { items: out, total };
 }
 
-const rows = [], seen = new Set(), report = [];
+const rows = [], report = [];
 mkdirSync('data/mobilede', { recursive: true });
 const PROG = 'data/mobilede/progress.jsonl', done = new Map();
-if (existsSync(PROG) && !process.argv.includes('--reset')) for (const l of readFileSync(PROG, 'utf8').split('\n').filter(Boolean)) { const d = JSON.parse(l); done.set(d.name, d); }
+if (existsSync(PROG) && !process.argv.includes('--reset')) for (const l of readFileSync(PROG, 'utf8').split('\n').filter(Boolean)) { const d = JSON.parse(l); done.set(d.name, d); if (/: 0 válidos \(.*decía [1-9]/.test(d.line)) done.delete(d.name); }
 let debugSaved = false;
 const PAUSE = +(arg('--pausa') ?? 400), PAGES = 50, WORKERS = +(arg('--hilos') ?? 3);
 let blocked = 0;
@@ -155,7 +155,7 @@ async function scrapeGroup(g) {
   const [make, names, body] = M[g.gen];
   const ids = await ms(make, names);
   if (!ids.length) { report.push(`${name}: modelo "${names}" no encontrado en mobile.de`); console.log(report.at(-1)); return; }
-  let n = 0, total = 0; const mine = [];
+  let n = 0, total = 0; const mine = []; const seen = new Set(); // por grupo
   for (let p = 1; p <= PAGES; p++) {
     const q = new URLSearchParams({ isSearchRequest: 'true', vc: 'Car', s: 'Car', dam: 'false', fr: `${g.y0}:${g.y1}`, pw: `${kw(g.cv) - tol(g)}:${kw(g.cv) + tol(g)}`, pageNumber: p, sb: 'rel', od: 'up' });
     if (FT[g.fuel]) q.set('ft', FT[g.fuel]);

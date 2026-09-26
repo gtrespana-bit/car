@@ -90,6 +90,7 @@ async function page(url) {
       const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36', 'Accept-Language': ES ? 'es-ES,es;q=0.9' : 'de-DE,de;q=0.9', Accept: 'text/html' } });
       if (r.status === 429 || r.status >= 500) { await sleep(8000); continue; }
       if (!r.ok) return { error: r.status };
+      if (r.redirected && new URL(r.url).pathname !== new URL(url).pathname) return { redirect: new URL(r.url).pathname };
       const html = await r.text();
       const m = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
       if (!m) return { error: 'sin __NEXT_DATA__', html };
@@ -119,29 +120,31 @@ function parse(l) {
   };
 }
 
-const rows = [], seen = new Set(), report = [];
+const rows = [], report = [];
 mkdirSync(DIR, { recursive: true });
 let debugSaved = false;
 // Progreso: cada grupo terminado se guarda al momento; si se corta, al relanzar sigue donde iba.
 const PROG = DIR + '/progress.jsonl';
 const done = new Map();
 if (existsSync(PROG) && !process.argv.includes('--reset')) {
-  for (const line of readFileSync(PROG, 'utf8').split('\n').filter(Boolean)) { const d = JSON.parse(line); done.set(d.name, d); }
+  for (const line of readFileSync(PROG, 'utf8').split('\n').filter(Boolean)) { const d = JSON.parse(line); done.set(d.name, d); if (/: 0 válidos \(.*decía [1-9]/.test(d.line)) done.delete(d.name); }
 }
 const PAUSE = 400, PAGES = 8, PARALLEL = process.argv.includes('--hilos') ? +process.argv[process.argv.indexOf('--hilos') + 1] : 4; // 8 páginas × 20 = hasta 160 anuncios por año y grupo
 
+const PATHS = {};
 async function runGroup(g) {
   const name = `${g.gen} · ${g.fuel} ${g.cv} CV · ${g.y0}-${g.y1}`;
   if (done.has(name)) { const d = done.get(name); d.rows.forEach((r) => rows.push(r)); report.push(d.line); return; }
   const [make, model, body] = SLUG[g.gen];
-  let n = 0, total = 0; const mine = [];
+  let n = 0, total = 0; const mine = []; const seen = new Set(); // por grupo: un anuncio descartado aquí puede valer para otro grupo
   for (let year = g.y0; year <= g.y1; year++) {
     for (let p = 1; p <= PAGES; p++) {
       const q = new URLSearchParams({ atype: 'C', cy: ES ? 'E' : 'D', ustate: 'N,U', sort: 'standard', desc: '0', fregfrom: year, fregto: year,
         powerfrom: kw(g.cv) - tol(g), powerto: kw(g.cv) + tol(g), powertype: 'kw', page: p });
       if (FUEL[g.fuel]) q.set('fuel', FUEL[g.fuel]);
       if (body) q.set('body', body);
-      const j = await page(`${DOM}/lst/${make}/${model}?${q}`);
+      let j = await page(`${DOM}${PATHS[g.gen] || `/lst/${make}/${model}`}?${q}`);
+      if (j.redirect) { PATHS[g.gen] = j.redirect; j = await page(`${DOM}${j.redirect}?${q}`); } // la web cambió el nombre del modelo: se repite con los filtros
       if (j.error) {
         console.log(`${name} ${year} p${p}: error ${j.error}`);
         if (j.html && !debugSaved) { writeFileSync(DIR + '/debug.html', j.html); debugSaved = true; }
