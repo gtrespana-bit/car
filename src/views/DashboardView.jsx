@@ -8,7 +8,7 @@ import { buildAlerts, buildTaxCalendar, applyFilingStatus } from '../domain/comp
 import { STATUS_FLOW } from '../domain/finance.js';
 
 export default function DashboardView({ go, editVehicle }) {
-  const { state, tariffs, upsert, loadDemo, toast } = useStore();
+  const { state, tariffs, upsert, loadDemo, removeDemo, hasDemo, toast } = useStore();
   const year = new Date().getFullYear();
   const regime = state.company.vatRegime === 'general' ? 'general' : 'rebu';
 
@@ -51,6 +51,12 @@ export default function DashboardView({ go, editVehicle }) {
 
   return (
     <div className="space-y-5">
+      {hasDemo && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          <span>Estás viendo <b>datos de ejemplo</b>. Quítalos para empezar desde cero (lo que hayas dado de alta tú se conserva).</span>
+          <Button variant="danger" onClick={async () => { if (window.confirm('¿Quitar todos los datos de ejemplo?')) { await removeDemo(); toast('Datos de ejemplo quitados: todo a cero'); } }}>Quitar datos de ejemplo</Button>
+        </div>
+      )}
       <SectionTitle
         icon={Gauge}
         title={state.company.name ? `Cuadro de mando · ${state.company.name}` : 'Cuadro de mando'}

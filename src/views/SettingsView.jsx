@@ -9,7 +9,7 @@ import { ROLES, roleLabel } from '../lib/roles.js';
 import { useOptionalAuth } from '../lib/auth.jsx';
 
 export default function SettingsView({ initialTab = 'empresa' }) {
-  const { state, setCompany, tariffs, replaceAll, loadDemo, resetData, toast, mode, role, can } = useStore();
+  const { state, setCompany, tariffs, replaceAll, loadDemo, removeDemo, hasDemo, resetData, toast, mode, role, can } = useStore();
   const auth = useOptionalAuth();
   const isCloud = mode === 'supabase';
   const [tab, setTab] = useState(initialTab);
@@ -261,7 +261,9 @@ export default function SettingsView({ initialTab = 'empresa' }) {
                 <Upload className="w-4 h-4" /> Restaurar desde archivo
                 <input type="file" accept="application/json,.json" className="hidden" onChange={(e) => e.target.files?.[0] && importJson(e.target.files[0])} />
               </label>
-              <Button variant="secondary" icon={Database} onClick={() => { loadDemo(); toast('Datos de ejemplo cargados'); }}>Cargar datos de ejemplo</Button>
+              {hasDemo
+                ? <Button variant="secondary" icon={RotateCcw} onClick={async () => { await removeDemo(); toast('Datos de ejemplo quitados'); }}>Quitar datos de ejemplo</Button>
+                : <Button variant="secondary" icon={Database} onClick={() => { loadDemo(); toast('Datos de ejemplo cargados'); }}>Cargar datos de ejemplo</Button>}
               <Button variant="danger" icon={RotateCcw} onClick={() => setConfirmReset(true)}>Borrar todo</Button>
             </div>
           </Card>

@@ -387,6 +387,22 @@ export function StoreProvider({ children }) {
 
   const loadDemo = useCallback(() => replaceAll(demoState()), [replaceAll]);
 
+  /** Quita SOLO los registros del ejemplo (mismos id que demoState) y deja lo que haya dado de alta el usuario. */
+  const removeDemo = useCallback(async () => {
+    const demo = demoState();
+    const cur = stateRef.current;
+    const ids = new Set(Object.values(demo).filter(Array.isArray).flat().map((x) => x.id));
+    const next = { ...cur };
+    for (const [k, v] of Object.entries(cur)) if (Array.isArray(v)) next[k] = v.filter((x) => !ids.has(x.id));
+    if (cur.company?.name && cur.company.name === demo.company?.name) next.company = defaultState().company;
+    await replaceAll(next);
+    try { localStorage.removeItem('importauto_completed_steps'); } catch { /* noop */ }
+  }, [replaceAll]);
+  const hasDemo = useMemo(() => {
+    const ids = new Set(Object.values(demoState()).filter(Array.isArray).flat().map((x) => x.id));
+    return Object.values(state).some((v) => Array.isArray(v) && v.some((x) => ids.has(x.id)));
+  }, [state]);
+
   /** Importa a la nube los datos que este navegador guardaba en local. */
   const importLocalBackup = useCallback(async () => {
     if (!localBackup) return;
@@ -489,6 +505,8 @@ export function StoreProvider({ children }) {
       updateCollection,
       replaceAll,
       loadDemo,
+      removeDemo,
+      hasDemo,
       resetData,
       reloadFromServer,
       saveVehicle,
@@ -502,7 +520,7 @@ export function StoreProvider({ children }) {
       dismissLocalBackup,
       toasts,
     }),
-    [state, ready, repo, role, sync, tariffs, toast, log, setCompany, upsert, remove, updateCollection, replaceAll, loadDemo, resetData, reloadFromServer, saveVehicle, issueInvoice, nextInvoiceNumber, deleteVehicle, putPhotos, localBackup, importLocalBackup, dismissLocalBackup, toasts],
+    [state, ready, repo, role, sync, tariffs, toast, log, setCompany, upsert, remove, updateCollection, replaceAll, loadDemo, removeDemo, hasDemo, resetData, reloadFromServer, saveVehicle, issueInvoice, nextInvoiceNumber, deleteVehicle, putPhotos, localBackup, importLocalBackup, dismissLocalBackup, toasts],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
