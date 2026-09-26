@@ -11,8 +11,9 @@ const BASE = [...MARKET_OBSERVATIONS, ...CANDIDATE_OBSERVATIONS];
 const dupKey = (o) => [o.market, o.gen, o.year, o.km, o.price].join('|');
 const have = new Set(BASE.map(dupKey));
 // Capturas completas hechas en el PC del usuario (cada fila con su URL individual):
-//   DE: mobile.de · ES: milanuncios (API) y autoscout24.es. Se quitan duplicados.
-const FILES = process.argv.includes('--sin-mobile') ? [] : ['data/mobilede/rows.json', 'data/milanuncios/rows.json', 'data/autoscout-es/rows.json'];
+//   DE: mobile.de · ES: milanuncios (API). autoscout24.es NO entra por defecto: muchos concesionarios
+//   publican allí el precio FINANCIADO (nota ¹), de media un 9-10 % por debajo del precio al contado.
+const FILES = process.argv.includes('--sin-mobile') ? [] : ['data/mobilede/rows.json', 'data/milanuncios/clean.json', ...(process.argv.includes('--con-autoscout-es') ? ['data/autoscout-es/rows.json'] : [])];
 const MOBILE = FILES.filter((f) => existsSync(f)).flatMap((f) => JSON.parse(readFileSync(f, 'utf8')))
   .filter((r) => !['Seat', 'Cupra'].includes(r[0]))
   .map(([brand, model, gen, market, engine, year, km, price, source, url]) => ({ brand, model, gen, market, kind: 'anuncio', engine, year, km, price, source, url }))
@@ -111,7 +112,7 @@ out.sort((a, b) => b.pEmp - a.pEmp);
 
 const eur = (x) => `${Math.round(x).toLocaleString('es-ES')} €`;
 const pct = (x) => `${(x * 100).toFixed(0)} %`;
-const verdict = (r) => r.pEmp > 2500 && r.pReal > 1000 ? '🟢 Muy rentable' : r.pEmp > 1500 ? '🟡 Rentable' : r.pEmp > 500 ? '🟠 Justo' : '🔴 No compensa';
+const verdict = (r) => r.nES < 15 ? '⚪ Faltan ventas ES' : r.pEmp > 2500 && r.pReal > 1000 ? '🟢 Muy rentable' : r.pEmp > 1500 ? '🟡 Rentable' : r.pEmp > 500 ? '🟠 Justo' : '🔴 No compensa';
 
 let md = `# Oportunidades de importación medidas con anuncios reales\n\n`;
 md += `Generado por \`node scripts/opportunities.mjs\` sobre ${O.length} anuncios (${O.filter((o) => o.market === 'DE').length} DE / ${O.filter((o) => o.market === 'ES').length} ES).\n`;

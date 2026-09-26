@@ -116,6 +116,7 @@ function parse(l) {
     title: [l.vehicle?.make, l.vehicle?.model, l.vehicle?.modelVersionInput, l.vehicle?.subtitle].filter(Boolean).join(' '),
     city: l.location?.city || '', zip: String(l.location?.zip || ''), country: l.location?.countryCode || CC,
     priv: /priv/i.test(l.seller?.type || ''),
+    financed: !!l.price?.priceSuperscriptString,
     fuelTxt: l.vehicle?.fuel || '',
   };
 }
@@ -160,6 +161,7 @@ async function runGroup(g) {
         seen.add(a.id); fresh++;
         if (!a.url || !a.price || !a.km || !a.year || a.country !== CC) continue;
         if (ES && /^(35|38)/.test(a.zip)) continue; // Canarias (IGIC)
+        if (ES && a.financed) continue;               // precio financiado (nota ¹), no es el de contado
         if (!(a.year >= g.y0 && a.year <= g.y1 && a.km > 1000 && a.km < 350000 && a.price > 3000 && a.price < 150000)) continue;
         if (a.kw && Math.abs(a.kw - kw(g.cv)) > tol(g)) continue;
         if (BAN[g.gen] && BAN[g.gen].test(a.title)) continue;

@@ -5,7 +5,7 @@ import { EMPRESA_RANKING, EMPRESA_META } from '../data/catalog/empresaRanking.js
 
 const eur = (x) => `${Math.round(x).toLocaleString('es-ES')} €`;
 const pct = (x) => `${Math.round(x * 100)} %`;
-const TONE = { '🟢': 'emerald', '🟡': 'amber', '🟠': 'sky', '🔴': 'rose' };
+const TONE = { '🟢': 'emerald', '🟡': 'amber', '🟠': 'sky', '🔴': 'rose', '⚪': 'slate' };
 const trust = (r) => (r.nES >= 30 ? ['Alta', 'emerald'] : r.nES >= 15 ? ['Media', 'amber'] : ['Baja: pocos anuncios ES', 'rose']);
 
 export default function OpportunitiesView() {
